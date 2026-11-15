@@ -10,7 +10,7 @@
  * The voices are rendered ahead of time (`sounds/compose.py`) and kept in `public/shows/sniper/`.
  */
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
-import { Game, type Snapshot } from "./game.ts";
+import { Game, SAFARI, type Snapshot } from "./game.ts";
 import "./sniper.css";
 
 /** "THE POOL" as it reads in a sentence */
@@ -127,7 +127,20 @@ export function SniperPage() {
       .then((g) => {
         if (gone) return g.dispose();
         made = g;
-        g.showStats = new URLSearchParams(window.location.search).has("stats");
+        const asked = new URLSearchParams(window.location.search);
+        g.showStats = asked.has("stats");
+        if (asked.has("diag")) {
+          // what the game sees of the mouse and the window, sent to the dev server (`vite.config.ts` keeps it in out/diag.log)
+          const say = (what: string) => void fetch("/__diag", { method: "POST", body: `${(performance.now() / 1000).toFixed(2)} ${what}` }).catch(() => {});
+          g.onNote = say;
+          say(`start | ${navigator.userAgent} | coarse ${matchMedia("(pointer: coarse)").matches} hover ${matchMedia("(hover: hover)").matches} touchPoints ${navigator.maxTouchPoints} | screen dpr ${window.devicePixelRatio} | canvas filter ${"filter" in CanvasRenderingContext2D.prototype}`);
+          // is the card where it should be, and is it what a click in the middle of the window would land on?
+          setTimeout(() => {
+            const card = document.querySelector(".fps-card"), r = card?.getBoundingClientRect(), cs = card && getComputedStyle(card);
+            const top = document.elementFromPoint(window.innerWidth / 2, window.innerHeight / 2);
+            say(`card | rect ${r ? [r.left, r.top, r.width, r.height].map(Math.round).join(",") : "none"} | window ${window.innerWidth}x${window.innerHeight} | position ${cs?.position} z ${cs?.zIndex} overflow ${cs?.overflowY} display ${cs?.display} | at the middle: ${top?.tagName}.${top?.className}`);
+          }, 600);
+        }
         // a handle for the console and the browser checks
         (window as unknown as { __sniper: Game }).__sniper = g;
         setGame(g);
@@ -146,7 +159,7 @@ export function SniperPage() {
 
   const { phase, result } = snap;
   return (
-    <div className="fps">
+    <div className={SAFARI ? "fps safari" : "fps"}>
       <canvas ref={canvasRef} aria-label="The game: people a long way off, seen through a rifle scope" role="img" />
       {game && touch && phase === "playing" && <Pad game={game} />}
       {phase !== "playing" && (

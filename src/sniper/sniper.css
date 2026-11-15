@@ -2,6 +2,13 @@
    (.fps-card in ui/styles.css) set to be read over a lit scene. The synth's light single-stroke
    face reads grey at text sizes, so the words are in Archivo, white on a nearly solid black;
    what a button does is said in dark on amber. */
+/* Safari draws the game's canvas over a later element that only follows it in the page: the card was
+   there and could not be seen or clicked, so the game seemed to have started by itself. There (the
+   page marks itself .safari) the card is put over the canvas and said to be. */
+.fps.safari .fps-card.sniper-card {
+  position: relative;
+  z-index: 2;
+}
 .fps-card.sniper-card {
   width: min(540px, calc(100vw - 32px));
   gap: 16px;

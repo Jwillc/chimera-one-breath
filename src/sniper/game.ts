@@ -40,6 +40,12 @@ import { Woods } from "./woods.ts";
 import { Cast, TRAIT_TEXT, type Hit, type Passage, type Person } from "./people.ts";
 import { CREW_HEAD, drawSeated } from "./crew.ts";
 
+/**
+ * Safari, and the other browsers built on its engine alone (as every browser on an iPhone is). Its
+ * mouse and its drawing order are its own, and what is done about them is done for it only.
+ */
+export const SAFARI = typeof navigator !== "undefined" && /AppleWebKit/.test(navigator.userAgent) && !/Chrome|Chromium|Edg\/|OPR\/|Android/.test(navigator.userAgent);
+
 export type Phase = "menu" | "playing" | "paused" | "won" | "failed";
 export interface Result {
   kind: "down" | "wrong" | "gone" | "empty";
@@ -366,11 +372,23 @@ export class Game {
     this.onChange(this.snapshot);
   }
 
+  /** for finding out what a browser nobody here can drive is doing: what happened, to whoever is listening (`?diag`) */
+  onNote: ((what: string) => void) | null = null;
+  private noted = new Map<string, number>();
+  private note(what: string, more = ""): void {
+    if (!this.onNote) return;
+    // (the first few of each kind, then one in fifty)
+    const n = (this.noted.get(what) ?? 0) + 1;
+    this.noted.set(what, n);
+    if (n <= 6 || n % 50 === 0) this.onNote(`${what}${more ? ` ${more}` : ""} | n ${n} phase ${this.phase} locked ${this.locked} yaw ${this.aim.yaw.toFixed(4)}`);
+  }
+
   private capture(): void {
+    this.note("capture", `has ${typeof this.canvas.requestPointerLock}`);
     try {
       // a browser may refuse (no gesture, an embedded page): the mouse still aims over the view, and the arrow keys
       const r = this.canvas.requestPointerLock() as unknown as Promise<void> | undefined;
-      r?.catch?.(() => {});
+      r?.catch?.((e: unknown) => this.note("capture refused", String(e)));
     } catch {
       // not available here
     }
@@ -434,22 +452,74 @@ export class Game {
       this.keys.delete(e.code);
       if (e.code === "ShiftLeft" || e.code === "ShiftRight") this.letGo();
     });
-    on(window, "blur", () => this.pause());
+    // Safari has its own ways with the window's focus and the mouse (below); the others are left as they were
+    if (!SAFARI) on(window, "blur", () => this.pause());
+    else {
+      // (not on the instant: it may take the window's focus for a moment of its own and give it straight back)
+      on(window, "blur", () => {
+        this.note("blur");
+        setTimeout(() => !document.hasFocus() && this.pause(), 300);
+      });
+      on(document, "visibilitychange", () => document.hidden && this.pause());
+    }
+    let lockedAt = 0;
     on(document, "pointerlockchange", () => {
-      const was = this.locked;
+      const was = this.locked, now = performance.now();
       this.locked = document.pointerLockElement === this.canvas;
-      // Esc lets go of the mouse: that is the pause key
-      if (was && !this.locked && this.phase === "playing") this.pause();
+      this.note(`pointerlockchange ${this.locked ? "locked" : "free"}`);
+      if (this.locked) lockedAt = now;
+      // Esc lets go of the mouse: that is the pause key. (In Safari, a mouse given and taken straight back
+      // is nobody's Esc: the game goes on, and the mouse aims over the view.)
+      if (was && !this.locked && this.phase === "playing" && (!SAFARI || now - lockedAt > 1000)) this.pause();
       else this.onChange(this.snapshot);
     });
+    on(document, "pointerlockerror", () => this.note("pointerlockerror"));
     const mouse = () => performance.now() - this.fingered > 800;
-    on(this.canvas, "mousemove", (e) => {
-      // captured or not: where a page may not take the mouse, moving it over the view still aims
-      if (this.phase !== "playing" || this.shot || this.intro || !mouse()) return;
+    const aim = (dx: number, dy: number) => {
       const k = 0.0024 * (this.fov / 40);
-      this.turn(-e.movementX * k, -e.movementY * k);
-    });
+      this.turn(-dx * k, -dy * k);
+    };
+    if (!SAFARI) {
+      on(this.canvas, "mousemove", (e) => {
+        // captured or not: where a page may not take the mouse, moving it over the view still aims
+        this.moves[0]++;
+        this.moves[1] += Math.abs(e.movementX) + Math.abs(e.movementY);
+        if (this.phase !== "playing" || this.shot || this.intro || !mouse()) return;
+        aim(e.movementX, e.movementY);
+      });
+    } else {
+      // Safari rolls several of the mouse's movements into one event and gives, as how far it moved, only
+      // the last of them: aiming by that, the crosshair crawled. So: with the mouse captured, the sum over
+      // the movements the event was rolled from; free, how far the pointer has gone over the page.
+      const seen = { x: 0, y: 0, any: false };
+      on(document, "pointermove", (e) => {
+        if (e.pointerType !== "mouse") return;
+        const parts = this.locked ? (e.getCoalescedEvents?.() ?? []) : [];
+        let dx = 0, dy = 0;
+        for (const part of parts) {
+          dx += part.movementX;
+          dy += part.movementY;
+        }
+        if (!this.locked) {
+          dx = seen.any ? e.clientX - seen.x : 0;
+          dy = seen.any ? e.clientY - seen.y : 0;
+        } else if (!dx && !dy) {
+          dx = e.movementX;
+          dy = e.movementY;
+        }
+        Object.assign(seen, { x: e.clientX, y: e.clientY, any: true });
+        this.moves[0]++;
+        this.moves[1] += Math.abs(dx) + Math.abs(dy);
+        this.moves[2] += Math.abs(e.movementX) + Math.abs(e.movementY);
+        this.moves[3] += parts.length;
+        this.note("pointermove", `own ${e.movementX},${e.movementY} parts ${parts.length} used ${dx},${dy} target ${(e.target as Element | null)?.tagName}`);
+        if (this.phase !== "playing" || this.shot || this.intro || !mouse()) return;
+        if (!this.locked && e.target !== this.canvas) return;
+        aim(dx, dy);
+      });
+    }
     on(this.canvas, "mousedown", (e) => {
+      this.note("mousedown");
       if (this.phase !== "playing" || e.button !== 0 || !mouse()) return;
       if (!this.locked) this.capture();
       this.fire();
@@ -581,9 +651,20 @@ export class Game {
 
   /** one frame: everything moves by dt (not at all while paused) and is drawn */
   frame(dt: number): void {
+    const t0 = performance.now();
     const world = this.advance(this.phase === "paused" ? 0 : dt);
+    this.cost[0] += performance.now() - t0;
     this.draw(world);
+    // (when someone is listening: where a frame's time goes, every couple of seconds)
+    if (this.onNote && ++this.cost[5] >= 120) {
+      const c = this.cost, n = c[5], ms = (i: number) => (c[i] / n).toFixed(1);
+      this.onNote(`cost | ${this.stats.fps.toFixed(0)} fps | ms a frame: move ${ms(0)} scene ${ms(1)} copy ${ms(2)} words and gauges ${ms(3)} glow ${ms(4)} | canvas ${this.canvas.width}x${this.canvas.height} dpr ${this.dpr} | mouse: ${this.moves[0]} moves, ${this.moves[1]} px used (${this.moves[2]} by the events' own word, from ${this.moves[3]} parts) in these ${n} frames | phase ${this.phase}${this.shot ? " shot" : ""}`);
+      c.fill(0);
+      this.moves = [0, 0, 0, 0];
+    }
   }
+  private cost = [0, 0, 0, 0, 0, 0];
+  private moves = [0, 0, 0, 0];
 
   /** Move everything on by dt of the player's time. Returns how much time passed in the room: almost none while a bullet is in the air. */
   private advance(dt: number): number {
@@ -1090,6 +1171,7 @@ export class Game {
     cam.getWorldDirection(this.fwd);
     this.sound.listener(c.x, c.y, c.z, this.fwd.x, this.fwd.y, this.fwd.z);
 
+    const t0 = performance.now();
     const B = this.live;
     B.begin();
     // (what the rifle is in fades as the view goes in at the scope)
@@ -1102,6 +1184,7 @@ export class Game {
     if (this.shot) this.drawBullet(B, this.shot);
     B.end();
     this.gl.render(this.scene, cam);
+    const t1 = performance.now();
 
     const ctx = this.ctx;
     ctx.setTransform(1, 0, 0, 1, 0, 0);
@@ -1110,12 +1193,19 @@ export class Game {
     ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
     ctx.drawImage(this.glCanvas, 0, 0, this.canvas.width, this.canvas.height);
     ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
+    const t2 = performance.now();
     // what each throat is saying, at its mouth
     this.cast.drawWords(ctx, cam, this.w, this.h);
     if (this.intro) this.hudIntro(ctx);
     else if (this.shot) this.hudFlight(ctx, this.shot);
     else this.hudScope(ctx);
+    const t3 = performance.now();
     this.glow.apply(this.canvas, ctx, this.dpr);
+    const t4 = performance.now(), cost = this.cost;
+    cost[1] += t1 - t0;
+    cost[2] += t2 - t1;
+    cost[3] += t3 - t2;
+    cost[4] += t4 - t3;
   }
 
   /** the bullet, larger than life: a spinning wire slug, the air it parts, the rings it leaves */

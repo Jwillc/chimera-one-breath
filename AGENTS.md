@@ -40,6 +40,11 @@ https://jwillc.github.io/chimera-one-breath/; a push to `main` rebuilds and rede
 - **The rim's marks say where, not who.** A small red mark inside the scope's rim points at each person
   outside its circle (`whereabouts` in `game.ts`), all alike. Nothing on the screen singles out the
   target: finding which one it is, is the game.
+- **Safari is handled apart** (`SAFARI` in `game.ts`, the `.safari` class on the page): its card is
+  given a stacking order (it drew the canvas over the card), its mouse is read from `pointermove`
+  (its `movementX` undercounts), and a lost focus or mouse capture is not at once a pause. The
+  other browsers keep the plain handling. Nobody here can run Safari: `?diag` on the dev server
+  makes the page write what it sees to `out/diag.log`.
 - **The people are adults.**
 - A place may have an `opening` (only the drive does): seen once per contract, skipped by a click,
   not replayed on "Try again".
