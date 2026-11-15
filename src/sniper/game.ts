@@ -1222,10 +1222,34 @@ export class Game {
     if (u <= 0) text(ctx, this.touch ? "TAP TO SKIP" : "CLICK OR SPACE TO SKIP", w - 22, h - h * 0.05 + 5, { size: 12, color: V.blue, weight: 500, align: "right" });
   }
 
+  /**
+   * Where the people are, for whoever cannot find them: a small mark just inside the scope's rim
+   * toward each one who is outside its circle, gone once they are in it. Everyone is marked alike:
+   * it says where to look, never who to shoot.
+   */
+  private whereabouts(ctx: CanvasRenderingContext2D, R: number): void {
+    const { w, h } = this, cx = w / 2, cy = h / 2, cam = this.camera;
+    // how many pixels of the picture to a radian off its middle
+    const f = h / 2 / Math.tan((cam.fov * Math.PI) / 360);
+    for (const p of this.cast.list) {
+      if (p.state === "dead" || p.state === "gone") continue;
+      const v = this.tmp.copy(p.neck).applyMatrix4(cam.matrixWorldInverse);
+      if (v.z > -0.5) continue;
+      const sx = (v.x / -v.z) * f, sy = (-v.y / -v.z) * f, r = Math.hypot(sx, sy);
+      // (it comes up as they near the rim from inside, so it is never the thing that gives them away in the glass)
+      const a = 0.7 * smooth((r - 0.8 * R) / (0.25 * R));
+      if (a <= 0.01) continue;
+      const ux = sx / r, uy = sy / r, tx = cx + ux * (R - 9), ty = cy + uy * (R - 9), bx = tx - ux * 9, by = ty - uy * 9;
+      seg(ctx, tx, ty, bx - uy * 5.5, by + ux * 5.5, V.white, 1.6, { alpha: a });
+      seg(ctx, tx, ty, bx + uy * 5.5, by - ux * 5.5, V.white, 1.6, { alpha: a });
+    }
+  }
+
   private hudScope(ctx: CanvasRenderingContext2D): void {
     const { w, h } = this, cx = w / 2, cy = h / 2, R = Math.min(w, h) * 0.47;
     this.glass(ctx, R);
     if (this.phase === "menu") return;
+    this.whereabouts(ctx, R);
 
     // left: the contract. right: the glass. below: air and rounds
     const playing = this.phase === "playing";
