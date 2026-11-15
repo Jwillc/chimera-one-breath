@@ -10,7 +10,7 @@ import { G, Things, thingOf, thrown, type Ground, type Loose, type Shape, type T
 import type { Trait } from "../src/sniper/place.ts";
 
 const HEAD = 0.0145;
-const KINDS: Trait[] = ["hat", "glasses", "cigar", "drink", "phone"];
+const KINDS: Trait[] = ["hat", "glasses", "cigar", "drink", "phone", "crown", "sword", "skull"];
 const shape = (kind: Trait): Shape => thingOf(kind, 1, HEAD)!;
 const STONE: Ground = { floor: () => 0, water: () => null, soft: false };
 const EARTH: Ground = { floor: () => 0, water: () => null, soft: true };
@@ -40,7 +40,7 @@ function run(kind: Trait, ground: Ground, y: number, v: THREE.Vector3, w: THREE.
 
 describe("the sniper game's loose things", () => {
   test("every trait but the tie is a thing, with lines to draw and points to land on", () => {
-    expect(thingOf("tie", 1, HEAD)).toBeNull();
+    for (const worn of ["tie", "cape", "sing"] as const) expect(thingOf(worn, 1, HEAD)).toBeNull();
     for (const kind of KINDS) {
       const s = shape(kind);
       expect(s.segs.length).toBe(6 * s.color.length);
@@ -75,7 +75,7 @@ describe("the sniper game's loose things", () => {
     expect(low.events).not.toContain("break");
     expect(low.t.rest).toBe(true);
     // nothing else breaks, from any height a person has
-    for (const kind of ["hat", "glasses", "cigar", "phone"] as const) expect(run(kind, STONE, 2, v3(0, -3, 0), v3(), 6).events).not.toContain("break");
+    for (const kind of KINDS.filter((k) => k !== "drink")) expect(run(kind, STONE, 2, v3(0, -3, 0), v3(), 6).events).not.toContain("break");
   });
 
   test("a tipped glass lets its drink go before it lands", () => {
@@ -104,7 +104,7 @@ describe("the sniper game's loose things", () => {
   test("on a flight of steps a thing stops; it does not slide away down them", () => {
     // the game's steps: 9 m of rise in 30
     const steps: Ground = { floor: (_x, z) => 0.3 * z, water: () => null, soft: false };
-    for (const kind of ["hat", "glasses", "phone", "cigar"] as const) {
+    for (const kind of KINDS.filter((k) => k !== "drink")) {
       const events: ThingEvent["what"][] = [], things = new Things((e) => events.push(e.what), seeded(3));
       const t = things.release(shape(kind), v3(0, 1.7, 0), tilted(), v3(0, 0, -1), v3(3, 1, 2));
       for (let i = 0; i < 10 * 240; i++) things.update(1 / 240, steps);

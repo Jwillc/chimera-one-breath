@@ -11,8 +11,10 @@ import type { TelemetryMessage } from "../worklet/protocol.ts";
 import { spell } from "./words.ts";
 
 export type BodyName = "male" | "female";
-/** what a clip is (`sounds/compose.py`): the room's talk, the camp's, a phone call, a scream, a cry when shot, a line of the handler's */
-export type Kind = "chat" | "camp" | "phone" | "scream" | "shot" | "line";
+/** what a clip is (`sounds/compose.py`): the room's talk, the camp's, a phone call, a scream, a cry when shot, a phrase of the aria, a line of the handler's */
+export type Kind = "chat" | "camp" | "phone" | "scream" | "shot" | "sing" | "line";
+/** a sung phrase's loudness is kept in steps this long (s) */
+const STEP = 0.05;
 
 export interface Clip {
   id: string;
@@ -71,6 +73,8 @@ export class Sound {
   private readonly byId = new Map<string, Clip>();
   private readonly kit = new Map<string, KitSound>();
   private readonly last = new Map<string, Clip>();
+  /** how loud each sung phrase is through its length, against the loudest moment of any of them (0 to 1) */
+  private readonly loud = new Map<Clip, Float32Array>();
   private plays = 0;
   /** clips now sounding from somewhere in the world */
   readonly voices = new Set<Playing>();
@@ -112,7 +116,30 @@ export class Sound {
         tick();
       }),
     ]);
+    // the song: how loud it is at each moment, as it will be played (each phrase at its own gain)
+    let top = 1e-9;
+    for (const clip of s.byId.values()) {
+      if (clip.kind !== "sing") continue;
+      const d = clip.buffer.getChannelData(0), n = Math.round(STEP * clip.buffer.sampleRate), env = new Float32Array(Math.ceil(d.length / n));
+      for (let i = 0; i < env.length; i++) {
+        let sum = 0;
+        const end = Math.min(d.length, (i + 1) * n);
+        for (let k = i * n; k < end; k++) sum += d[k] * d[k];
+        env[i] = Math.sqrt(sum / n) * clip.gain;
+        top = Math.max(top, env[i]);
+      }
+      s.loud.set(clip, env);
+    }
+    for (const env of s.loud.values()) for (let i = 0; i < env.length; i++) env[i] /= top;
     return s;
+  }
+
+  /** How loud a sung phrase is at the moment now being heard, against the song's loudest (0 to 1; 0 for anything not sung). */
+  level(p: Playing | null): number {
+    const env = p && this.loud.get(p.clip);
+    if (!p || !env) return 0;
+    const t = this.clipTime(p);
+    return t < 0 ? 0 : (env[Math.min(env.length - 1, Math.floor(t / STEP))] ?? 0);
   }
 
   /** Call from a tap or click: a browser only starts audio from a user's gesture. */

@@ -1685,6 +1685,297 @@
    "start": 0.0798,
    "end": 1.4268,
    "gain": 1.153
+  },
+  {
+   "id": "female-sing-1",
+   "kind": "sing",
+   "body": "female",
+   "say": "1",
+   "words": [
+    [
+     0.1,
+     2.7,
+     "oo"
+    ],
+    [
+     2.7,
+     4.2,
+     "oo"
+    ]
+   ],
+   "wav": "female-sing-1.wav",
+   "tele": "female-sing-1.tele",
+   "start": 0.0894,
+   "end": 4.3049,
+   "gain": 0.552
+  },
+  {
+   "id": "female-sing-2",
+   "kind": "sing",
+   "body": "female",
+   "say": "2",
+   "words": [
+    [
+     0.1,
+     3.5,
+     "ah"
+    ],
+    [
+     3.5,
+     5.1,
+     "oo"
+    ]
+   ],
+   "wav": "female-sing-2.wav",
+   "tele": "female-sing-2.tele",
+   "start": 0.0867,
+   "end": 5.2081,
+   "gain": 0.675
+  },
+  {
+   "id": "female-sing-3",
+   "kind": "sing",
+   "body": "female",
+   "say": "3",
+   "words": [
+    [
+     0.1,
+     1.5,
+     "ah"
+    ],
+    [
+     1.5,
+     3.2,
+     "ah"
+    ],
+    [
+     3.2,
+     4.7,
+     "oo"
+    ]
+   ],
+   "wav": "female-sing-3.wav",
+   "tele": "female-sing-3.tele",
+   "start": 0.0851,
+   "end": 4.8123,
+   "gain": 0.859
+  },
+  {
+   "id": "female-sing-4",
+   "kind": "sing",
+   "body": "female",
+   "say": "4",
+   "words": [
+    [
+     0.1,
+     2.2,
+     "ah"
+    ]
+   ],
+   "wav": "female-sing-4.wav",
+   "tele": "female-sing-4.tele",
+   "start": 0.0829,
+   "end": 2.3119,
+   "gain": 1.043
+  },
+  {
+   "id": "female-sing-5",
+   "kind": "sing",
+   "body": "female",
+   "say": "5",
+   "words": [
+    [
+     0.1,
+     4.4,
+     "ah"
+    ]
+   ],
+   "wav": "female-sing-5.wav",
+   "tele": "female-sing-5.tele",
+   "start": 0.0768,
+   "end": 4.5142,
+   "gain": 1.227
+  },
+  {
+   "id": "female-sing-6",
+   "kind": "sing",
+   "body": "female",
+   "say": "6",
+   "words": [
+    [
+     0.1,
+     2.1,
+     "oo"
+    ],
+    [
+     2.1,
+     4.3,
+     "oo"
+    ]
+   ],
+   "wav": "female-sing-6.wav",
+   "tele": "female-sing-6.tele",
+   "start": 0.0892,
+   "end": 4.4031,
+   "gain": 0.552
+  },
+  {
+   "id": "intro-opera",
+   "kind": "line",
+   "body": "female",
+   "say": "Eyes on the stage. Fire on the high note.",
+   "words": [],
+   "wav": "intro-opera.wav",
+   "start": 0.0786,
+   "end": 2.916,
+   "gain": 1.145
+  },
+  {
+   "id": "brief-sing",
+   "kind": "line",
+   "body": "female",
+   "say": "Your target is singing.",
+   "words": [],
+   "wav": "brief-sing.wav",
+   "start": 0.0799,
+   "end": 1.5228,
+   "gain": 1.006
+  },
+  {
+   "id": "brief-crown",
+   "kind": "line",
+   "body": "female",
+   "say": "Your target is wearing a crown.",
+   "words": [],
+   "wav": "brief-crown.wav",
+   "start": 0.0799,
+   "end": 1.9899,
+   "gain": 1.012
+  },
+  {
+   "id": "brief-sword",
+   "kind": "line",
+   "body": "female",
+   "say": "Your target is holding a sword.",
+   "words": [],
+   "wav": "brief-sword.wav",
+   "start": 0.0801,
+   "end": 2.1182,
+   "gain": 0.997
+  },
+  {
+   "id": "brief-cape",
+   "kind": "line",
+   "body": "female",
+   "say": "Your target is wearing a cape.",
+   "words": [],
+   "wav": "brief-cape.wav",
+   "start": 0.0799,
+   "end": 1.8843,
+   "gain": 1.036
+  },
+  {
+   "id": "brief-skull",
+   "kind": "line",
+   "body": "female",
+   "say": "Your target is holding a skull.",
+   "words": [],
+   "wav": "brief-skull.wav",
+   "start": 0.0799,
+   "end": 2.049,
+   "gain": 1.049
+  },
+  {
+   "id": "male-scream-ohno",
+   "kind": "scream",
+   "body": "male",
+   "say": "ohno",
+   "words": [
+    [
+     0.1,
+     0.32,
+     "oh"
+    ],
+    [
+     0.32,
+     0.97,
+     "no"
+    ]
+   ],
+   "wav": "male-scream-ohno.wav",
+   "tele": "male-scream-ohno.tele",
+   "start": 0.0774,
+   "end": 1.0787,
+   "gain": 0.499
+  },
+  {
+   "id": "male-scream-ohgod",
+   "kind": "scream",
+   "body": "male",
+   "say": "ohgod",
+   "words": [
+    [
+     0.1,
+     0.3,
+     "oh"
+    ],
+    [
+     0.3,
+     0.8,
+     "god"
+    ]
+   ],
+   "wav": "male-scream-ohgod.wav",
+   "tele": "male-scream-ohgod.tele",
+   "start": 0.0781,
+   "end": 0.8751,
+   "gain": 0.461
+  },
+  {
+   "id": "female-scream-ohno",
+   "kind": "scream",
+   "body": "female",
+   "say": "ohno",
+   "words": [
+    [
+     0.1,
+     0.32,
+     "oh"
+    ],
+    [
+     0.32,
+     0.97,
+     "no"
+    ]
+   ],
+   "wav": "female-scream-ohno.wav",
+   "tele": "female-scream-ohno.tele",
+   "start": 0.0779,
+   "end": 1.0858,
+   "gain": 0.479
+  },
+  {
+   "id": "female-scream-ohgod",
+   "kind": "scream",
+   "body": "female",
+   "say": "ohgod",
+   "words": [
+    [
+     0.1,
+     0.3,
+     "oh"
+    ],
+    [
+     0.3,
+     0.8,
+     "god"
+    ]
+   ],
+   "wav": "female-scream-ohgod.wav",
+   "tele": "female-scream-ohgod.tele",
+   "start": 0.078,
+   "end": 0.9119,
+   "gain": 0.493
   }
  ],
  "kit": {

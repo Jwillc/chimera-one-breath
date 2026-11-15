@@ -6,9 +6,11 @@
  * seen through to the bones while it goes in, through whatever lies on its way, and out; then the
  * room's time comes back, and they go down with their hat or their glass falling after them.
  *
- * Five places, one after another and then round again with more people in each: a lit condo seen
+ * Six places, one after another and then round again with more people in each: a lit condo seen
  * from the roof opposite, a rooftop pool from a higher roof, the steps of a building from the
- * street below it, a café on the far bank from a moving car, a camp in the woods from a ridge.
+ * street below it, a café on the far bank from a moving car, a camp in the woods from a ridge, and
+ * the stage of an opera house from the back of it, where the target is one of the players and a shot
+ * under the aria's high note is not heard.
  *
  * Every sound is a simulated airway (see `sounds/compose.py`): the room's talk and
  * screams, the handler, the rifle (a beatbox kit), the bullet (a long "sh" and a mouth going
@@ -37,6 +39,7 @@ import { Pool } from "./pool.ts";
 import { Steps } from "./steps.ts";
 import { Drive } from "./drive.ts";
 import { Woods } from "./woods.ts";
+import { Opera } from "./opera.ts";
 import { Cast, TRAIT_TEXT, type Hit, type Passage, type Person } from "./people.ts";
 import { CREW_HEAD, drawSeated } from "./crew.ts";
 
@@ -50,6 +53,8 @@ export type Phase = "menu" | "playing" | "paused" | "won" | "failed";
 export interface Result {
   kind: "down" | "wrong" | "gone" | "empty";
   head: boolean;
+  /** nobody heard it (fired under the singing) */
+  unheard: boolean;
   seconds: number;
   points: number;
 }
@@ -69,12 +74,28 @@ export interface Snapshot {
 }
 
 /** the places, in the order the contracts come to them */
-const PLACES: (() => Place)[] = [() => new Condo(), () => new Pool(), () => new Steps(), () => new Drive(), () => new Woods()];
+const PLACES: (() => Place)[] = [() => new Condo(), () => new Pool(), () => new Steps(), () => new Drive(), () => new Woods(), () => new Opera()];
 
 const ZOOMS = [4, 8, 16, 32];
 const ROUNDS = 3;
 /** a contract's opening: how slowly the room's time runs while the view goes round, how long before the round ends the view starts in at the scope, and how long that takes (s) */
 const SLOW = 0.2, LEAD = 0.5, ENTER = 1.6;
+/**
+ * The rifle put together in an opening: when the hands go down to the case, each part's time (s into
+ * the opening), where it comes in from and where the hand that fits it is (both in the rifle's own
+ * frame: its muzzle at the origin, the stock toward +z), the sound of it going on; and when it is raised.
+ */
+const BUILD: { reach: number; raise: number; parts: { part: string; when: number; from: [number, number, number]; hold: [number, number, number]; say: [string, number, number, number][] }[] } = {
+  reach: 2.3,
+  raise: 5.9,
+  parts: [
+    { part: "receiver", when: 2.9, from: [0, -0.4, 0.1], hold: [0, -0.02, 1.0], say: [["t", 0.9, 0.3, 0]] },
+    { part: "barrel", when: 3.6, from: [0, 0, -0.45], hold: [0, -0.02, 0.6], say: [["click", 1.1, 0.4, 0.3], ["K", 1.6, 0.2, 0.34]] },
+    { part: "suppressor", when: 4.3, from: [0, 0, -0.3], hold: [0, 0, 0.12], say: [["t", 1.6, 0.25, 0.2], ["t", 1.7, 0.25, 0.3], ["t", 1.8, 0.25, 0.4]] },
+    { part: "scope", when: 4.9, from: [0, 0.28, 0], hold: [0, 0.1, 1.03], say: [["click", 1.6, 0.4, 0.33]] },
+    { part: "magazine", when: 5.4, from: [0, -0.25, 0], hold: [0, -0.13, 1.06], say: [["K", 1.3, 0.4, 0.3], ["click", 2, 0.25, 0.34]] },
+  ],
+};
 /** a finger on the view: how far the crosshair goes over the picture for the finger's own travel, and how much two fingers must spread or close for a step of zoom */
 const FINGER = 1.25, PINCH = 1.22;
 /** the bullet's journey as the camera tells it: where it starts (the muzzle, m along its line), when it
@@ -105,6 +126,8 @@ interface Shot {
   what: string | null;
   /** the people know about it when it lands */
   heard: boolean;
+  /** fired under singing loud enough to hide it: nobody will know of it */
+  covered: boolean;
   glass: Crossing | null;
   broke: boolean;
   /** seconds since the trigger, and metres flown */
@@ -250,6 +273,9 @@ export class Game {
   private alarmed = false;
   private pending: Result["kind"] | null = null;
   private pendingHead = false;
+  private pendingQuiet = false;
+  /** the stage's loudness as its gauge shows it (eased, so the bar does not flicker) */
+  private stage = 0;
   private outcome: { result: Result; in: number } | null = null;
   private queue: { at: number; id: string }[] = [];
   private subtitle = { text: "", until: 0 };
@@ -266,7 +292,9 @@ export class Game {
   private still = false;
   private shot: Shot | null = null;
   /** the contract's opening, while it lasts: seconds into it */
-  private intro: { t: number } | null = null;
+  private intro: { t: number; done: Set<string> } | null = null;
+  /** the rifle's lines by part (the suppressor, the barrel, the receiver, the magazine, the scope) */
+  private readonly rifleParts = new Map<string, { a: number[]; color: string; width: number }[]>();
   /** the contracts whose opening has been shown (trying one again goes straight to the scope) */
   private readonly seen = new Set<number>();
   private wakes: { x: number; y: number; z: number; age: number }[] = [];
@@ -358,6 +386,11 @@ export class Game {
     if (!this.touch) this.capture();
   }
 
+  /** From the menu: begin at the n-th contract (for trying a place without playing up to it). */
+  skipTo(n: number): void {
+    if (this.phase === "menu" && n >= 1) this.contract = Math.floor(n) - 1;
+  }
+
   pause(): void {
     if (this.phase !== "playing") return;
     this.keys.clear();
@@ -402,7 +435,7 @@ export class Game {
     this.go((n - 1) % PLACES.length);
     const place = this.place, { n: count, strollers } = place.people(Math.floor((n - 1) / PLACES.length));
     place.reset();
-    this.target = this.cast.populate(place, count, strollers);
+    this.target = this.cast.populate(place, count, strollers, place.crowd(Math.floor((n - 1) / PLACES.length), this.touch));
     this.rounds = ROUNDS;
     this.watch = 0;
     this.alarmed = false;
@@ -411,7 +444,7 @@ export class Game {
     this.result = null;
     this.shot = null;
     this.rifle.visible = false;
-    this.intro = place.opening && !this.seen.has(n) ? { t: 0 } : null;
+    this.intro = place.opening && !this.seen.has(n) ? { t: 0, done: new Set() } : null;
     this.seen.add(n);
     this.wakes = [];
     this.bolt = this.recoil = 0;
@@ -773,7 +806,8 @@ export class Game {
       this.banner.age = 0;
       return 1;
     }
-    return SLOW + (1 - SLOW) * u;
+    const pace = this.place.opening!.pace ?? SLOW;
+    return pace + (1 - pace) * u;
   }
 
   /** the view during the opening: round the rifle and what carries it, then in behind the scope and through it */
@@ -795,6 +829,7 @@ export class Game {
 
   /** during the opening: the rifle where it is held, whoever holds it, and the head of whoever else is with them */
   private crew(B: Beams, alpha: number, dt: number): void {
+    if (this.place.opening?.assemble) return this.assembly(B, alpha, dt);
     const eye = this.eye, show = alpha > 0.5, K = CREW_HEAD;
     const q = this.tmpQ.setFromEuler(this.tmpE.set(this.aim.pitch, this.aim.yaw, 0, "YXZ"));
     const d = new THREE.Vector3(0, 0, -1).applyQuaternion(q), right = new THREE.Vector3(1, 0, 0).applyQuaternion(q), up = new THREE.Vector3(0, 1, 0).applyQuaternion(q);
@@ -812,6 +847,70 @@ export class Game {
     const cam = this.camera.position, driver = this.place.driver;
     this.cast.extra(0, head, new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().makeBasis(d, up, right)), cam, dt, K);
     if (driver) this.cast.extra(1, driver.pos, driver.q, cam, dt, K);
+  }
+
+  /**
+   * An opening in which the rifle is not there at first: whoever will hold it sits as one of the
+   * crowd, hands on their knees; then reaches down to a case at their feet, and puts the rifle
+   * together across their knees, part by part (each goes on with a sound of its own); then brings
+   * it up to the shoulder and leans in to the scope.
+   */
+  private assembly(B: Beams, alpha: number, dt: number): void {
+    const it = this.intro!, t = it.t, eye = this.eye, K = CREW_HEAD, snd = this.sound;
+    const q = new THREE.Quaternion().setFromEuler(this.tmpE.set(this.aim.pitch, this.aim.yaw, 0, "YXZ"));
+    const d = new THREE.Vector3(0, 0, -1).applyQuaternion(q), right = new THREE.Vector3(1, 0, 0).applyQuaternion(q), up = new THREE.Vector3(0, 1, 0).applyQuaternion(q);
+    const fwd = new THREE.Vector3(d.x, 0, d.z).normalize(), across = new THREE.Vector3(right.x, 0, right.z).normalize();
+    const P = (base: THREE.Vector3, f: number, r: number, u: number) => base.clone().addScaledVector(fwd, f).addScaledVector(across, r).setY(base.y + u);
+    this.rifle.visible = false;
+    // where they end up (the eye at the scope) says where they sit; before that they sit up straight
+    const leant = eye.clone().addScaledVector(d, -0.36 - 9.6 * K).addScaledVector(up, 0.078 - 15.2 * K).addScaledVector(right, -3.3 * K);
+    const hip = P(leant, -0.14, 0, -0.5), raise = smooth((t - BUILD.raise) / 0.9), neck = P(hip, 0.02, 0, 0.52).lerp(leant, raise);
+    // the rifle: across the knees while it is put together, pointing off to their left; then up to where it is aimed
+    const qLap = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 0, -1), across.clone().multiplyScalar(-0.9).addScaledVector(fwd, 0.4).setY(-0.08).normalize());
+    const lap = P(hip, 0.3, 0, 0.2).sub(new THREE.Vector3(0, 0, 1.1).applyQuaternion(qLap));
+    const M = new THREE.Matrix4().compose(lap.lerp(eye.clone().addScaledVector(d, S0), raise), qLap.slerp(q, raise), new THREE.Vector3(1, 1, 1));
+    const at = (x: number, y: number, z: number) => new THREE.Vector3(x, y, z).applyMatrix4(M);
+    let busy: THREE.Vector3 | null = null;
+    for (const { part, when, from, hold, say } of BUILD.parts) {
+      if (t < when) continue;
+      if (!it.done.has(part)) {
+        it.done.add(part);
+        for (const [name, rate, level, delay] of say) snd.hit(name, rate, level, delay);
+      }
+      // each part comes in from where it was held, and is there
+      const k = 1 - smooth((t - when) / 0.4), ox = from[0] * k, oy = from[1] * k, oz = from[2] * k, a = alpha * Math.min(1, (t - when) / 0.2);
+      for (const l of this.rifleParts.get(part) ?? []) {
+        const p0 = at(l.a[0] + ox, l.a[1] + oy, l.a[2] + oz), p1 = at(l.a[3] + ox, l.a[4] + oy, l.a[5] + oz);
+        B.seg(p0.x, p0.y, p0.z, p1.x, p1.y, p1.z, l.color, l.width, a);
+      }
+      if (t < when + 0.5) busy = at(hold[0] + ox, hold[1] + oy, hold[2] + oz);
+    }
+    // the hands: on the knees; down to the case and up with the first of it; then one at the grip, the other at whatever is going on (or under the barrel)
+    const first = BUILD.parts[0].when, has = t >= first, reach = smooth((t - BUILD.reach) / 0.35) * (1 - smooth((t - first) / 0.3));
+    const box = P(hip, 0.45, 0, -0.5);
+    const handR = has ? at(0.03, -0.07, 1.15) : P(hip, 0.38, 0.1, 0.1).lerp(box, reach);
+    const handL = busy ?? (has ? at(0, -0.035, 0.72) : P(hip, 0.38, -0.1, 0.1).lerp(box, reach));
+    if (t > BUILD.reach) {
+      // the case it came in, open at their feet
+      const a = alpha * smooth((t - BUILD.reach) / 0.3) * 0.9, c = [P(box, -0.14, -0.3, -0.06), P(box, -0.14, 0.3, -0.06), P(box, 0.14, 0.3, -0.06), P(box, 0.14, -0.3, -0.06)];
+      c.forEach((p0, i) => {
+        const p1 = c[(i + 1) % 4];
+        B.seg(p0.x, p0.y, p0.z, p1.x, p1.y, p1.z, V.blueMid, 1.05, a);
+        B.seg(p0.x, p0.y, p0.z, p0.x, p0.y - 0.1, p0.z, V.blueMid, 0.85, a);
+      });
+      for (const i of [0, 1]) B.seg(c[i].x, c[i].y, c[i].z, c[i].x - fwd.x * 0.2, c[i].y + 0.22, c[i].z - fwd.z * 0.2, V.blueMid, 0.85, a);
+      if (!it.done.has("case")) {
+        it.done.add("case");
+        snd.hit("click", 0.8, 0.3);
+        snd.hit("click", 0.95, 0.25, 0.12);
+      }
+    }
+    drawSeated(B, { hip, neck, fwd, right: across, twist: 0.1 * raise, handR, handL }, mix(V.blue, V.white, 0.55), alpha);
+    if (alpha <= 0.5) return;
+    // the head: to the stage; down at the hands while they work; then in to the scope
+    const down = smooth((t - BUILD.reach) / 0.4) * (1 - raise);
+    const headQ = new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().makeBasis(d, up, right)).multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), -0.55 * down));
+    this.cast.extra(0, neck, headQ, this.camera.position, dt, K);
   }
 
   // ------------------------------------------------------------------ the shot
@@ -850,8 +949,10 @@ export class Game {
       hiss.src.playbackRate.setValueAtTime(0.8, now);
       hiss.src.playbackRate.linearRampToValueAtTime(0.42, now + T3);
     }
+    // where there is singing, a shot under its loudest is nobody's business
+    const loud = this.cast.loud(), covered = this.place.drown !== null && loud !== null && loud >= this.place.drown;
     this.cast.hush();
-    this.shot = { o, d, right, up, L, hit, what: hit ? "person" : wall.what, heard: !!hit || wall.heard, glass: glass && glass.t < L ? glass : null, broke: false, t: 0, s: S0, wake: S0, inside: false, into: 0, thru: 1, ahead: [], met: [], landed: false, after: 0, far: wall.t, spent: !hit, beat: 0.5, hiss, pyew, camAt: new THREE.Vector3(), lookAt: new THREE.Vector3() };
+    this.shot = { o, d, right, up, L, hit, what: hit ? "person" : wall.what, heard: !!hit || wall.heard, covered, glass: glass && glass.t < L ? glass : null, broke: false, t: 0, s: S0, wake: S0, inside: false, into: 0, thru: 1, ahead: [], met: [], landed: false, after: 0, far: wall.t, spent: !hit, beat: 0.5, hiss, pyew, camAt: new THREE.Vector3(), lookAt: new THREE.Vector3() };
     this.flashAt = this.clock;
     this.rifle.position.copy(o).addScaledVector(d, S0);
     this.rifle.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, -1), d);
@@ -979,9 +1080,10 @@ export class Game {
 
   /** they know */
   private raise(): void {
-    if (this.alarmed) return;
+    if (this.alarmed || this.shot?.covered) return;
     this.alarmed = true;
     this.cast.alarm();
+    this.place.alarm();
   }
 
   /** the bullet has done what it came to do: come out of someone, or stopped in something */
@@ -1001,10 +1103,13 @@ export class Game {
       snd.hit("Pf", 0.5, 0.9);
       snd.hit("B", 0.9, 0.9);
       snd.hit("pop", 0.55, 0.7, 0.02);
+      // (if it is the singer who is hit, the song stops: there is no hiding that)
+      if (p.sings) sh.covered = false;
       this.cast.shoot(p, at, sh.d, sh.hit.head, 0.62);
       this.raise();
       this.pending = p === this.target ? "down" : "wrong";
       this.pendingHead = sh.hit.head;
+      this.pendingQuiet = sh.covered;
       return;
     }
     if (sh.what === null) return;
@@ -1028,7 +1133,7 @@ export class Game {
     this.rifle.visible = false;
     this.recoil = 1;
     if (this.pending) {
-      this.settle(this.pending, this.pendingHead);
+      this.settle(this.pending, this.pendingHead, this.pendingQuiet);
       this.pending = null;
       return;
     }
@@ -1048,15 +1153,15 @@ export class Game {
   }
 
   /** the contract is decided: say so, and in a moment show the card */
-  private settle(kind: Result["kind"], head: boolean): void {
+  private settle(kind: Result["kind"], head: boolean, unheard = false): void {
     const seconds = this.watch;
-    const points = kind === "down" ? 1000 + (head ? 500 : 0) + Math.max(0, Math.round(500 - 8 * seconds)) + 250 * this.rounds : 0;
-    this.outcome = { result: { kind, head, seconds, points }, in: 3.4 };
+    const points = kind === "down" ? 1000 + (head ? 500 : 0) + (unheard ? 500 : 0) + Math.max(0, Math.round(500 - 8 * seconds)) + 250 * this.rounds : 0;
+    this.outcome = { result: { kind, head, unheard, seconds, points }, in: 3.4 };
     const pick = (ids: string[]) => ids[Math.floor(Math.random() * ids.length)];
     const id = kind === "down" ? pick(["win-1", "win-2", "win-3"]) : kind === "wrong" ? pick(["wrong-1", "wrong-2"]) : kind;
     this.queue = [{ at: this.clock + 0.7, id }];
     this.banner =
-      kind === "down" ? { text: "TARGET DOWN", sub: head ? "HEAD SHOT" : "", color: V.green, age: 0 }
+      kind === "down" ? { text: "TARGET DOWN", sub: [head ? "HEAD SHOT" : "", unheard ? "UNHEARD" : ""].filter(Boolean).join(" - "), color: V.green, age: 0 }
       : kind === "wrong" ? { text: "WRONG TARGET", sub: "", color: BLOOD, age: 0 }
       : kind === "gone" ? { text: "TARGET LOST", sub: this.place.lost.banner, color: BLOOD, age: 0 }
       : { text: "OUT OF ROUNDS", sub: "", color: BLOOD, age: 0 };
@@ -1064,56 +1169,68 @@ export class Game {
 
   /** the rifle, as the bullet's camera sees it: drawn for each place (on its bipod or held), its muzzle at its origin, looking down −z */
   private drawRifle(bipod: boolean): void {
-    const B = this.rifleLines, steel = V.blue, hot = mix(V.blue, V.white, 0.4);
+    const B = this.rifleLines, steel = V.blue, hot = mix(V.blue, V.white, 0.4), parts = this.rifleParts;
+    parts.clear();
+    // (each line is kept under the part it belongs to, for the opening in which the rifle is put together)
+    let part = "";
+    const put = (x0: number, y0: number, z0: number, x1: number, y1: number, z1: number, color: string, width: number) => {
+      B.seg(x0, y0, z0, x1, y1, z1, color, width);
+      if (!parts.has(part)) parts.set(part, []);
+      parts.get(part)!.push({ a: [x0, y0, z0, x1, y1, z1], color, width });
+    };
     const hoop = (z: number, r: number, y: number, color: string, width: number, n = 10) => {
       for (let i = 0; i < n; i++) {
         const a0 = (i / n) * Math.PI * 2, a1 = ((i + 1) / n) * Math.PI * 2;
-        B.seg(Math.cos(a0) * r, y + Math.sin(a0) * r, z, Math.cos(a1) * r, y + Math.sin(a1) * r, z, color, width);
+        put(Math.cos(a0) * r, y + Math.sin(a0) * r, z, Math.cos(a1) * r, y + Math.sin(a1) * r, z, color, width);
       }
     };
     const tube = (z0: number, z1: number, r: number, y: number, color: string, width: number, n = 4) => {
       for (let i = 0; i < n; i++) {
         const a = (i / n) * Math.PI * 2 + 0.4;
-        B.seg(Math.cos(a) * r, y + Math.sin(a) * r, z0, Math.cos(a) * r, y + Math.sin(a) * r, z1, color, width);
+        put(Math.cos(a) * r, y + Math.sin(a) * r, z0, Math.cos(a) * r, y + Math.sin(a) * r, z1, color, width);
       }
     };
     B.begin();
-    // the suppressor, the barrel, the receiver
+    part = "suppressor";
     for (const z of [0, 0.08, 0.16, 0.24]) hoop(z, 0.022, 0, hot, 1.3);
     tube(0, 0.24, 0.022, 0, hot, 1.05, 6);
     hoop(0, 0.008, 0, V.white, 1.05, 6);
+    // the barrel, and the bipod under it
+    part = "barrel";
     tube(0.24, 0.9, 0.011, 0, steel, 1.05);
     for (const z of [0.5, 0.9]) hoop(z, 0.011, 0, steel, 0.85, 6);
-    for (const x of [-0.026, 0.026]) for (const y of [-0.05, 0.028]) B.seg(x, y, 0.9, x, y, 1.26, steel, 1.3);
+    for (const x of bipod ? [-1, 1] : []) {
+      put(0, -0.012, 0.52, x * 0.13, -0.3, 0.44, steel, 1.3);
+      put(x * 0.13, -0.3, 0.44, x * 0.16, -0.3, 0.44, steel, 1.6);
+    }
+    // the receiver, the bolt handle, the stock, the scope's mounts
+    part = "receiver";
+    for (const x of [-0.026, 0.026]) for (const y of [-0.05, 0.028]) put(x, y, 0.9, x, y, 1.26, steel, 1.3);
     for (const z of [0.9, 1.26]) {
-      B.seg(-0.026, -0.05, z, 0.026, -0.05, z, steel, 1.3);
-      B.seg(-0.026, 0.028, z, 0.026, 0.028, z, steel, 1.3);
-      for (const x of [-0.026, 0.026]) B.seg(x, -0.05, z, x, 0.028, z, steel, 1.3);
+      put(-0.026, -0.05, z, 0.026, -0.05, z, steel, 1.3);
+      put(-0.026, 0.028, z, 0.026, 0.028, z, steel, 1.3);
+      for (const x of [-0.026, 0.026]) put(x, -0.05, z, x, 0.028, z, steel, 1.3);
     }
-    // the magazine, the bolt handle, the stock
-    for (const x of [-0.016, 0.016]) for (const z of [1.0, 1.1]) B.seg(x, -0.05, z, x, -0.14, z + 0.02, V.amber, 1.05);
-    B.seg(-0.016, -0.14, 1.02, 0.016, -0.14, 1.02, V.amber, 1.05);
-    B.seg(-0.016, -0.14, 1.12, 0.016, -0.14, 1.12, V.amber, 1.05);
-    B.seg(0.026, 0, 1.2, 0.07, -0.03, 1.22, hot, 1.6);
+    put(0.026, 0, 1.2, 0.07, -0.03, 1.22, hot, 1.6);
     for (const x of [-0.02, 0.02]) {
-      B.seg(x, 0.02, 1.26, x, 0.03, 1.66, steel, 1.05);
-      B.seg(x, -0.05, 1.26, x, -0.11, 1.66, steel, 1.05);
-      B.seg(x, 0.03, 1.66, x, -0.11, 1.66, steel, 1.3);
+      put(x, 0.02, 1.26, x, 0.03, 1.66, steel, 1.05);
+      put(x, -0.05, 1.26, x, -0.11, 1.66, steel, 1.05);
+      put(x, 0.03, 1.66, x, -0.11, 1.66, steel, 1.3);
     }
-    B.seg(-0.02, 0.03, 1.66, 0.02, 0.03, 1.66, steel, 1.3);
-    B.seg(-0.02, -0.11, 1.66, 0.02, -0.11, 1.66, steel, 1.3);
-    // the scope over it, and the bipod under
+    put(-0.02, 0.03, 1.66, 0.02, 0.03, 1.66, steel, 1.3);
+    put(-0.02, -0.11, 1.66, 0.02, -0.11, 1.66, steel, 1.3);
+    for (const z of [0.95, 1.12]) put(0, 0.028, z, 0, 0.06, z, steel, 1.3);
+    part = "magazine";
+    for (const x of [-0.016, 0.016]) for (const z of [1.0, 1.1]) put(x, -0.05, z, x, -0.14, z + 0.02, V.amber, 1.05);
+    put(-0.016, -0.14, 1.02, 0.016, -0.14, 1.02, V.amber, 1.05);
+    put(-0.016, -0.14, 1.12, 0.016, -0.14, 1.12, V.amber, 1.05);
+    part = "scope";
     tube(0.86, 1.2, 0.019, 0.078, hot, 1.05, 6);
     for (const z of [0.86, 1.2]) hoop(z, 0.019, 0.078, hot, 1.05, 8);
     for (const [z0, z1] of [[0.74, 0.86], [1.2, 1.3]]) {
       tube(z0, z1, 0.03, 0.078, hot, 1.05, 6);
       hoop(z0, 0.03, 0.078, hot, 1.3);
       hoop(z1, 0.03, 0.078, hot, 1.3);
-    }
-    for (const z of [0.95, 1.12]) B.seg(0, 0.028, z, 0, 0.06, z, steel, 1.3);
-    for (const x of bipod ? [-1, 1] : []) {
-      B.seg(0, -0.012, 0.52, x * 0.13, -0.3, 0.44, steel, 1.3);
-      B.seg(x * 0.13, -0.3, 0.44, x * 0.16, -0.3, 0.44, steel, 1.6);
     }
     B.end();
   }
@@ -1269,6 +1386,8 @@ export class Game {
     ctx.arc(cx, cy, R, 0, Math.PI * 2, true);
     ctx.fill("evenodd");
     ctx.restore();
+    // (a window with no size yet has no glass to draw)
+    if (R < 6) return;
     ring(ctx, cx, cy, R, V.blueMid, 1.8);
     ring(ctx, cx, cy, R - 5, V.blueDim, 1, { alpha: 0.7 });
     if (lit <= 0) return;
@@ -1326,7 +1445,8 @@ export class Game {
     // how many pixels of the picture to a radian off its middle
     const f = h / 2 / Math.tan((cam.fov * Math.PI) / 360);
     for (const p of this.cast.list) {
-      if (p.state === "dead" || p.state === "gone") continue;
+      // (not the crowd: there may be a houseful of them, and none of them is who is being looked for)
+      if (p.state === "dead" || p.state === "gone" || p.crowd) continue;
       const v = this.tmp.copy(p.neck).applyMatrix4(cam.matrixWorldInverse);
       if (v.z > -0.5) continue;
       const sx = (v.x / -v.z) * f, sy = (-v.y / -v.z) * f, r = Math.hypot(sx, sy);
@@ -1358,6 +1478,16 @@ export class Game {
     text(ctx, `${ZOOMS[this.zoom]}X`, w - 22, 44, { size: 26, weight: 700, align: "right" });
     text(ctx, this.range > 0 ? `${this.range.toFixed(0)} M` : "--- M", w - 22, 68, { size: 16, align: "right" });
     text(ctx, `${Math.floor(this.watch / 60)}:${String(Math.floor(this.watch % 60)).padStart(2, "0")}`, w - 22, 90, { size: 16, color: V.blue, align: "right" });
+    // where there is singing: how loud it is now, and (the mark on the bar) how loud it has to be to hide a shot
+    const need = this.place.drown;
+    if (need !== null) {
+      const loud = this.cast.loud() ?? 0, on = loud >= need, x1 = w - 22, x0 = x1 - 120, y0 = 126;
+      this.stage += (loud - this.stage) * 0.3;
+      text(ctx, on ? "COVERED" : "ARIA", x1, 114, { size: 12, color: on ? V.green : V.blue, align: "right", ls: 0.18, weight: on ? 800 : 600 });
+      seg(ctx, x0, y0, x1, y0, V.frame, 4);
+      if (this.stage > 0.01) seg(ctx, x0, y0, x0 + 120 * Math.min(1, this.stage), y0, on ? V.green : V.white, 4);
+      seg(ctx, x0 + 120 * need, y0 - 6, x0 + 120 * need, y0 + 6, V.amber, 1.5);
+    }
 
     // (on a touch screen the page's buttons are here, and they carry the breath and the rounds)
     const b = this.breath, bx = 22, by = h - 30, bw = Math.min(170, w * 0.22), keys = !this.touch;

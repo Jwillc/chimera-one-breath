@@ -11,7 +11,11 @@ import { Beams } from "../ui/render/beams3d.ts";
 import { V, mix } from "../ui/colors.ts";
 import type { Kind } from "./sound.ts";
 
-export type Trait = "hat" | "tie" | "drink" | "phone" | "glasses" | "cigar";
+/**
+ * The thing that tells someone apart. The first six are anybody's; the rest are a stage's (the one
+ * who is singing, and what the others are playing), for a place whose people are its players.
+ */
+export type Trait = "hat" | "tie" | "drink" | "phone" | "glasses" | "cigar" | "sing" | "crown" | "sword" | "cape" | "skull";
 
 /** somewhere to be: where, the way to face (forward is (cos th, sin th) over x and z), and what kind of place it is */
 export interface Spot {
@@ -28,6 +32,10 @@ export interface Spot {
   pace?: number;
   /** the target is one of the people who start at a spot marked so (anyone, if none is) */
   mark?: boolean;
+  /** whoever has the trait "sing" stands here, and sings */
+  sings?: boolean;
+  /** for one of the crowd: people who are there, can be hit like anyone, and are never the target */
+  crowd?: boolean;
 }
 
 export interface Impact {
@@ -66,6 +74,10 @@ export interface Opening {
   near: number;
   high: number;
   low: number;
+  /** how fast the room's time runs while the view goes round (a fifth, if not said: slow motion) */
+  pace?: number;
+  /** whoever has the rifle starts without it, as one of the crowd, and puts it together as the view goes round */
+  assemble?: boolean;
 }
 
 export interface Place {
@@ -91,14 +103,20 @@ export interface Place {
   readonly hear: number;
   /** how unsteady the rifle's rest is (1: lying still) */
   readonly rough: number;
+  /** where there is singing: how loud it has to be, against its loudest (0 to 1), for a shot to go unheard */
+  readonly drown: number | null;
   /** the things that can tell someone apart here, what they talk like, and whether they are all men */
   readonly traits: Trait[] | null;
-  readonly chat: Kind;
+  readonly chat: Kind | null;
   readonly men: boolean;
   /** called for each sound the place itself makes (the game plays it) */
   sound: ((name: string, rate: number, level: number) => void) | null;
   /** how many people the n-th time round (0 first), and how many of them wander */
   people(lap: number): { n: number; strollers: number };
+  /** how many of the crowd there are besides (at the spots marked for them); `light`: where every head costs (a phone), fewer */
+  crowd(lap: number, light: boolean): number;
+  /** a shot has been heard here (the people are told by the game: this is for what the place itself does about it) */
+  alarm(): void;
   /** a new contract */
   reset(): void;
   /** where the scope's eye is now */
@@ -141,9 +159,10 @@ export abstract class Scene implements Place {
   abstract readonly hear: number;
   readonly rough: number = 1;
   readonly traits: Trait[] | null = null;
-  readonly chat: Kind = "chat";
+  readonly chat: Kind | null = "chat";
   readonly men: boolean = false;
   readonly soft: boolean = false;
+  readonly drown: number | null = null;
   readonly opening: Opening | null = null;
   readonly bipod: boolean = true;
   readonly driver: { pos: THREE.Vector3; q: THREE.Quaternion } | null = null;
@@ -169,6 +188,10 @@ export abstract class Scene implements Place {
   abstract wayOut(p: { x: number; z: number; sit: number }): { x: number; z: number }[];
   abstract raycast(o: THREE.Vector3, d: THREE.Vector3): Impact;
 
+  crowd(_lap: number, _light: boolean): number {
+    return 0;
+  }
+  alarm(): void {}
   reset(): void {}
   tilt(): number {
     return 0;

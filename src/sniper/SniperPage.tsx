@@ -129,6 +129,8 @@ export function SniperPage() {
         made = g;
         const asked = new URLSearchParams(window.location.search);
         g.showStats = asked.has("stats");
+        // ?contract=6 begins at the sixth contract
+        if (asked.has("contract")) g.skipTo(Number(asked.get("contract")));
         if (asked.has("diag")) {
           // what the game sees of the mouse and the window, sent to the dev server (`vite.config.ts` keeps it in out/diag.log)
           const say = (what: string) => void fetch("/__diag", { method: "POST", body: `${(performance.now() / 1000).toFixed(2)} ${what}` }).catch(() => {});
@@ -172,7 +174,8 @@ export function SniperPage() {
             </p>
           ) : phase === "won" && result ? (
             <p>
-              Contract {snap.contract}, {place(snap.place)}: {result.head ? "a head shot" : "a body shot"} after {result.seconds.toFixed(0)} seconds at the scope. {result.points} points, {snap.score} in all. Next: {place(snap.next)}.
+              Contract {snap.contract}, {place(snap.place)}: {result.head ? "a head shot" : "a body shot"}
+              {result.unheard ? ", heard by nobody," : ""} after {result.seconds.toFixed(0)} seconds at the scope. {result.points} points, {snap.score} in all. Next: {place(snap.next)}.
             </p>
           ) : phase === "failed" && result ? (
             <p>
@@ -183,7 +186,7 @@ export function SniperPage() {
               Contract {snap.contract}, {place(snap.place)}. Target: {snap.target.toLowerCase()}.
             </p>
           ) : (
-            <p>Five contracts: a lit condo, a rooftop pool, the steps of a grand building, a café seen from a moving car, a camp in the woods. A few people in each, and one of them is yours. Every sound is a simulated throat: their talk, the trigger, the bullet, your own breath.</p>
+            <p>Six contracts: a lit condo, a rooftop pool, the steps of a grand building, a café seen from a moving car, a camp in the woods, a night at the opera. A few people in each, and one of them is yours. Every sound is a simulated throat: their talk, the trigger, the bullet, your own breath.</p>
           )}
           {!error && (
             <button className="primary large" disabled={!game} onClick={() => game?.start()}>

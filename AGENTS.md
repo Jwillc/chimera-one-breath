@@ -11,7 +11,7 @@ https://jwillc.github.io/chimera-one-breath/; a push to `main` rebuilds and rede
 - `src/sniper/people.ts`: the cast (bodies, minds, wounds, the X-ray). `things.ts`: what they carry,
   worn or loose. `crew.ts`: the shooter and driver seen in an opening.
 - `src/sniper/place.ts`: what a place is (`Place`, `Scene`). `condo.ts`, `pool.ts`, `steps.ts`,
-  `drive.ts`, `woods.ts`: the five, in the order of `PLACES` in `game.ts`.
+  `drive.ts`, `woods.ts`, `opera.ts`: the six, in the order of `PLACES` in `game.ts`.
 - `src/sniper/sound.ts`, `fx.ts`, `words.ts`: playing the voices, blood and glass, how a cry is spelled.
 - `src/sniper/SniperPage.tsx` and `sniper.css`: the card over the canvas.
 - `public/shows/sniper/`: every sound, rendered ahead. `sounds/compose.py`: the script that renders
@@ -45,9 +45,30 @@ https://jwillc.github.io/chimera-one-breath/; a push to `main` rebuilds and rede
   (its `movementX` undercounts), and a lost focus or mouse capture is not at once a pause. The
   other browsers keep the plain handling. Nobody here can run Safari: `?diag` on the dev server
   makes the page write what it sees to `out/diag.log`.
+- **A place may have its own players and its own crowd.** `Place.traits` is what tells its possible
+  targets apart, and it need not be the six ordinary things: the opera's are what its players are
+  playing (`sing`, `crown`, `sword`, `cape`, `skull`), each with its line from the handler
+  (`brief-<trait>` in `sounds/compose.py`) and, where it is a thing, its shape in `things.ts`.
+  Spots marked `crowd` hold people who can be hit like anyone and are never the target
+  (`Place.crowd()` says how many); they get an ordinary thing only to be somebody.
+- **At the opera the song is the cover.** Whoever has the trait `sing` stands at the spot marked
+  `sings` and sings. A shot fired while `Cast.loud()` is at or over the place's `drown` alarms
+  nobody (`Shot.covered`) and is worth 500 more, unless it is the singer who is hit. The aria is
+  six takes (`SONG` in `sounds/compose.py`), each played at its own marking; only the fifth, the
+  long high note, is over the line, and `tests/sniper-opera.test.ts` holds it to that. No words in it.
+- **A heard shot empties the opera.** The audience is in two kinds: a dozen people of the cast in
+  the seats and boxes (heads, voices, as shootable as anyone), and some three hundred who are only
+  a head and shoulders, drawn once while they sit (`Opera.sitting`) and one by one once
+  `Place.alarm()` has been called, each along their row to an aisle and out. At most nine screams
+  sound at once (`SCREAMS` in `people.ts`). Twenty heads cost about 8 ms a frame on a desktop:
+  `Place.crowd(lap, light)` gives fewer where the game is played by touch.
 - **The people are adults.**
-- A place may have an `opening` (only the drive does): seen once per contract, skipped by a click,
-  not replayed on "Try again".
+- A place may have an `opening` (the drive and the opera do): the view goes round whoever has the
+  rifle, with a line of what is different here, then in at the scope. Seen once per contract,
+  skipped by a click, not replayed on "Try again". The drive's is in slow motion round the car;
+  the opera's is at the room's own speed (`pace: 1`, the aria is being sung) and `assemble`s the
+  rifle: he sits in the gallery as one of the audience, takes it from a case at his feet and fits
+  it together part by part (`BUILD` and `assembly` in `game.ts`; the rifle's lines are kept by part).
 
 ## Checks
 

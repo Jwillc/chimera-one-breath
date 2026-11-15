@@ -120,7 +120,7 @@ class Pen {
 
 /**
  * The thing that tells someone apart, as lines: `s` is their size against the adult male, `u` the
- * metres in one cm of their head. (A tie is clothing: it stays on.)
+ * metres in one cm of their head. (A tie and a cape are clothing: they stay on. Singing is not a thing.)
  */
 export function thingOf(trait: Trait, s: number, u: number): Shape | null {
   const ring = (n: number, f: (c: number, sn: number) => number[]) => Array.from({ length: n }, (_, i) => f(Math.cos((i / n) * Math.PI * 2), Math.sin((i / n) * Math.PI * 2)));
@@ -164,6 +164,40 @@ export function thingOf(trait: Trait, s: number, u: number): Shape | null {
     loop(pen, hoop(0.055), V.amber, 1.6);
     const pts = [...ring(4, (a, b) => [a * r, 0, b * r]), ...ring(4, (a, b) => [a * r, 0.12, b * r])].flatMap((p) => pen.pt(p));
     return { kind: trait, on: "hand", at: [0, 0.06 * s, 0], reach: 0.06 * s, ...pen.lines(), dry, pts, lip: [0, 0.06 * s, 0], gyr: 0.045 * s, drag: 0.03, bounce: 0.3, grip: 0.4, floats: false, breaks: 2.2, blast: 2.5 };
+  }
+  if (trait === "crown") {
+    // a band round the head and six points standing on it (the head's cm)
+    const c: [number, number, number] = [0.5, 24.2, 0], pen = new Pen(c, u), n = 12;
+    const band = ring(n, (a, b) => [0.5 + 9.4 * a, 22.2, 8.1 * b]), tips = Array.from({ length: n / 2 }, (_, i) => [0.5 + 10 * Math.cos(((2 * i + 1) / n) * Math.PI * 2), 27.4, 8.6 * Math.sin(((2 * i + 1) / n) * Math.PI * 2)]);
+    loop(pen, band, V.amber, 1.6);
+    loop(pen, ring(n, (a, b) => [0.5 + 9.5 * a, 23.6, 8.2 * b]), V.amber, 1.05);
+    tips.forEach((tip, i) => {
+      pen.line(band[2 * i], tip, V.amber, 1.3);
+      pen.line(tip, band[(2 * i + 2) % n], V.amber, 1.3);
+    });
+    const pts = [...ring(6, (a, b) => [0.5 + 9.4 * a, 22.2, 8.1 * b]), ...tips].flatMap((p) => pen.pt(p));
+    return { kind: trait, on: "head", at: [c[0] * u, c[1] * u, c[2] * u], reach: 0, ...pen.lines(), dry: pen.color.length, pts, lip: [0, 0, 0], gyr: 8 * u, drag: 0.1, bounce: 0.35, grip: 0.5, floats: false, breaks: Infinity, blast: 4 };
+  }
+  if (trait === "sword") {
+    // held upright before them: the blade, the guard across it, the grip in the hand
+    const pen = new Pen([0, 0.38, 0], s);
+    pen.line([0, 0.03, 0], [0, 0.9, 0], V.white, 1.6);
+    pen.line([0.014, 0.03, 0], [0, 0.9, 0], V.white, 0.85, 0.8);
+    pen.line([-0.1, 0.03, 0], [0.1, 0.03, 0], V.amber, 1.6);
+    pen.line([0, 0.03, 0], [0, -0.13, 0], V.amber, 2.1);
+    const pts = [[0, 0.9, 0], [0, -0.13, 0], [-0.1, 0.03, 0], [0.1, 0.03, 0]].flatMap((p) => pen.pt(p));
+    return { kind: trait, on: "hand", at: [0, 0.38 * s, 0], reach: 0.03 * s, ...pen.lines(), dry: pen.color.length, pts, lip: [0, 0, 0], gyr: 0.27 * s, drag: 0.02, bounce: 0.3, grip: 0.4, floats: false, breaks: Infinity, blast: 2 };
+  }
+  if (trait === "skull") {
+    // held up on the palm and looked at: a cranium of three hoops, two sockets, a jaw
+    const pen = new Pen([0, 0.1, 0], s), R = 0.085, BONE = "#f0ead8";
+    loop(pen, ring(8, (a, b) => [a * R, 0.1 + b * R, 0]), BONE, 1.05);
+    loop(pen, ring(8, (a, b) => [0, 0.1 + b * R, a * R]), BONE, 1.05);
+    loop(pen, ring(8, (a, b) => [a * R, 0.1, b * R]), BONE, 0.85, 0.8);
+    for (const z of [-0.03, 0.03]) loop(pen, ring(5, (a, b) => [R * 0.92, 0.11 + b * 0.02, z + a * 0.02]), BONE, 1.05);
+    pen.line([R * 0.7, 0.03, -0.04], [R * 0.7, 0.03, 0.04], BONE, 1.3);
+    const pts = [[R, 0.1, 0], [-R, 0.1, 0], [0, 0.1 + R, 0], [0, 0.1 - R, 0], [0, 0.1, R], [0, 0.1, -R]].flatMap((p) => pen.pt(p));
+    return { kind: trait, on: "hand", at: [0, 0.1 * s, 0], reach: 0.05 * s, ...pen.lines(), dry: pen.color.length, pts, lip: [0, 0, 0], gyr: 0.06 * s, drag: 0.08, bounce: 0.35, grip: 0.5, floats: false, breaks: Infinity, blast: 2.5 };
   }
   if (trait === "phone") {
     // held up along the side of the head

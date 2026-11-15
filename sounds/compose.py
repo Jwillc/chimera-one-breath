@@ -10,6 +10,7 @@ trigger, a kick under a snare for the shot, hi-hats for the bolt. The bullet in 
 "sh" and a mouth going "pyew"; the shooter's breath is a whisper.
 
     SPEECH_ENGINE=/path/to/chimera uv run compose.py     # renders the takes and writes ../public/shows/sniper/
+    SPEECH_ENGINE=/path/to/chimera uv run compose.py sing intro-opera     # only these (kinds or ids), added to what is there
 
 The rendered sounds are in the repo, so the game does not need this run. To run it you need a build
 of the CHIMERA command-line engine (`chimera render notes | text | speech | beatbox`): the engine in
@@ -19,6 +20,7 @@ import json
 import os
 import shutil
 import subprocess
+import sys
 import wave
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
@@ -32,7 +34,7 @@ GAME = HERE.parent / "public/shows/sniper"
 SR = 48000
 
 SAY = {"ha": "hɑ", "oh": "oʊ", "ah": "ɑ", "uh": "ʌ", "huh": "hʌ", "ugh": "ʌɡ", "oof": "ʊf", "agh": "æ",
-       "hoo": "hu", "hah": "hɑ", "pyoo": "pju"}
+       "hoo": "hu", "hah": "hɑ", "pyoo": "pju", "oo": "u"}
 # where each body speaks from (MIDI): talk sits a little above it, a scream well over an octave up
 BASE = {"male": 45, "female": 57}
 
@@ -75,6 +77,8 @@ CLIPS = {
         ("run", [("run", 17, .4)], SCREAM),
         ("help", [("help", 18, .45)], SCREAM),
         ("getdown", [("get", 15, .18), ("down", 18, .5)], SCREAM),
+        ("ohno", [("oh", 17, .22), ("no", 20, .3), ("~", 16, .35)], SCREAM),
+        ("ohgod", [("oh", 16, .2), ("god", 20, .5)], SCREAM),
     ],
     # shot: a cry knocked out of the body, falling away as it goes down
     "shot": [
@@ -85,6 +89,20 @@ CLIPS = {
     ],
 }
 
+# The singer at the opera: an aria with no words, in "oo" and "ah". Six phrases, sung one after another
+# and round again. Each is its own take so that each has its own breath: soft at first, a climb, and
+# then one long high note sung with everything (the note a shot can hide under), and a soft way down.
+# The engine evens out how loud a take comes, whatever breath is put behind it, so each phrase also
+# has its marking, soft to full (the last number): the game plays it that loud against the high note.
+SONG = [
+    ("1", [("oo", 12, 1.0), ("~", 15, .8), ("~", 14, .8), ("oo", 12, 1.5)], dict(pressure=7.5, tension=.45, breathiness=.12, vibrato=16), .45),
+    ("2", [("ah", 12, .8), ("~", 16, .8), ("~", 19, 1.2), ("~", 17, .6), ("oo", 16, 1.6)], dict(pressure=8.5, tension=.5, breathiness=.08, vibrato=18), .55),
+    ("3", [("ah", 16, .7), ("~", 19, .7), ("ah", 21, 1.0), ("~", 19, .7), ("oo", 17, 1.5)], dict(pressure=9.5, tension=.55, breathiness=.06, vibrato=20), .7),
+    ("4", [("ah", 19, .6), ("~", 21, .6), ("~", 23, .9)], dict(pressure=11, tension=.6, breathiness=.05, vibrato=18), .85),
+    ("5", [("ah", 24, 3.4), ("~", 21, .9)], dict(pressure=18, tension=.7, breathiness=.02, vibrato=28), 1),
+    ("6", [("oo", 19, 1.0), ("~", 17, 1.0), ("oo", 12, 2.2)], dict(pressure=7.5, tension=.45, breathiness=.12, vibrato=16), .45),
+]
+
 # the handler on the radio: the engine's own speech (id -> what she says)
 HANDLER = {
     "intro": "Eyes on the lit window.",
@@ -92,12 +110,18 @@ HANDLER = {
     "intro-steps": "Eyes on the steps. They are going in.",
     "intro-drive": "Eyes on the far bank. We are not stopping.",
     "intro-woods": "Eyes on the camp, through the trees.",
+    "intro-opera": "Eyes on the stage. Fire on the high note.",
     "brief-hat": "Your target is wearing a hat.",
     "brief-tie": "Your target is wearing a red tie.",
     "brief-drink": "Your target is holding a drink.",
     "brief-phone": "Your target is on the phone.",
     "brief-glasses": "Your target is wearing glasses.",
     "brief-cigar": "Your target is smoking.",
+    "brief-sing": "Your target is singing.",
+    "brief-crown": "Your target is wearing a crown.",
+    "brief-sword": "Your target is holding a sword.",
+    "brief-cape": "Your target is wearing a cape.",
+    "brief-skull": "Your target is holding a skull.",
     "go": "One breath. One shot.",
     "win-1": "Target down.",
     "win-2": "Good shot. Target down.",
@@ -169,10 +193,11 @@ def measure(path, target=.2):
 
 
 def main():
+    only = set(sys.argv[1:])
     TAKES.mkdir(exist_ok=True)
-    if GAME.exists():
+    if GAME.exists() and not only:
         shutil.rmtree(GAME)
-    GAME.mkdir(parents=True)
+    GAME.mkdir(parents=True, exist_ok=True)
     jobs, clips, shots = [], [], {}
     for body, base in BASE.items():
         for kind, takes in CLIPS.items():
@@ -181,17 +206,29 @@ def main():
                 (TAKES / f"{cid}.json").write_text(json.dumps(melody(score, base, source), ensure_ascii=False))
                 jobs.append(("notes", TAKES / f"{cid}.json", TAKES / cid, body, "--tele", TAKES / f"{cid}.tele"))
                 clips.append({"id": cid, "kind": kind, "body": body, "say": name, "words": spans(score)})
+    for name, score, source, _ in SONG:
+        cid = f"female-sing-{name}"
+        (TAKES / f"{cid}.json").write_text(json.dumps(melody(score, BASE["female"], source), ensure_ascii=False))
+        jobs.append(("notes", TAKES / f"{cid}.json", TAKES / cid, "female", "--tele", TAKES / f"{cid}.tele"))
+        clips.append({"id": cid, "kind": "sing", "body": "female", "say": name, "words": spans(score)})
     for cid, text in HANDLER.items():
         jobs.append(("text", TAKES / cid, text, "female"))
         clips.append({"id": cid, "kind": "line", "body": "female", "say": text, "words": []})
-    for name, (score, source, body) in ONESHOT.items():
-        (TAKES / f"{name}.json").write_text(json.dumps(melody(score, BASE.get(body, 45), source), ensure_ascii=False))
-        jobs.append(("notes", TAKES / f"{name}.json", TAKES / name, body))
-        shots[name] = TAKES / f"{name}.wav"
-    # the bullet's air: one long "sh"
-    jobs.append(("speech", TAKES / "hiss", "ʃːːːːːː", "male"))
-    shots["hiss"] = TAKES / "hiss.wav"
-    jobs.append(("beatbox", TAKES / "kit", "B . K . t . Pf .", "male", 100, 1))
+    if only:
+        # only what was asked for (a kind or an id), added to what is already there
+        wanted = [c for c in clips if c["kind"] in only or c["id"] in only]
+        keep = {str(TAKES / c["id"]) for c in wanted}
+        jobs = [j for j in jobs if str(j[2] if j[0] == "notes" else j[1]) in keep]
+        clips = wanted
+    if not only:
+        for name, (score, source, body) in ONESHOT.items():
+            (TAKES / f"{name}.json").write_text(json.dumps(melody(score, BASE.get(body, 45), source), ensure_ascii=False))
+            jobs.append(("notes", TAKES / f"{name}.json", TAKES / name, body))
+            shots[name] = TAKES / f"{name}.wav"
+        # the bullet's air: one long "sh"
+        jobs.append(("speech", TAKES / "hiss", "ʃːːːːːː", "male"))
+        shots["hiss"] = TAKES / "hiss.wav"
+        jobs.append(("beatbox", TAKES / "kit", "B . K . t . Pf .", "male", 100, 1))
     with ThreadPoolExecutor(8) as ex:
         list(ex.map(lambda j: run(*j), jobs))
 
@@ -202,8 +239,24 @@ def main():
         if (TAKES / f"{cid}.tele").exists():
             shutil.copy(TAKES / f"{cid}.tele", GAME / f"{cid}.tele")
             c["tele"] = f"{cid}.tele"
-        c["start"], c["end"], c["gain"], peak = measure(GAME / c["wav"])
-        print(f"{cid:24s} {c['start']:.2f}-{c['end']:.2f} s  peak {peak:.3f}  gain {c['gain']:.2f}")
+        c["start"], c["end"], c["gain"], c["peak"] = measure(GAME / c["wav"])
+    # the song's phrases keep their loudness against each other: one gain, which brings the loudest to just under full
+    song = [c for c in clips if c["kind"] == "sing"]
+    marking = {f"female-sing-{name}": level for name, _, _, level in SONG}
+    for c in song:
+        c["gain"] = round(.92 / max(k["peak"] for k in song) * marking[c["id"]], 3)
+    for c in clips:
+        peak = c.pop("peak")
+        print(f"{c['id']:24s} {c['start']:.2f}-{c['end']:.2f} s  peak {peak:.3f}  gain {c['gain']:.2f}")
+    path = GAME / "manifest.json"
+    if only:
+        # into the manifest that is there: these in place of their old selves, or after the rest
+        man = json.loads(path.read_text())
+        fresh = {c["id"]: c for c in clips}
+        man["clips"] = [fresh.pop(c["id"], c) for c in man["clips"]] + list(fresh.values())
+        path.write_text(json.dumps(man, indent=1, ensure_ascii=False))
+        print(f"{len(clips)} clips added or replaced; {len(man['clips'])} in all -> {GAME}")
+        return
     kit = {}
     for name, stem in KIT.items():
         shots[name] = TAKES / "kit" / f"{stem}.wav"
@@ -212,7 +265,7 @@ def main():
         start, end, gain, peak = measure(src, target=.3)
         kit[name] = {"wav": f"kit-{name}.wav", "start": start, "end": end, "gain": gain}
         print(f"kit {name:20s} {start:.2f}-{end:.2f} s  peak {peak:.3f}  gain {gain:.2f}")
-    (GAME / "manifest.json").write_text(json.dumps({"sampleRate": SR, "clips": clips, "kit": kit}, indent=1, ensure_ascii=False))
+    path.write_text(json.dumps({"sampleRate": SR, "clips": clips, "kit": kit}, indent=1, ensure_ascii=False))
     print(f"{len(clips)} clips, {len(kit)} kit sounds -> {GAME}")
 
 

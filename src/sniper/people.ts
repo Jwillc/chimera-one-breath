@@ -32,7 +32,9 @@ import { Things, drawShape, smoke, thingOf, thrown, type Shape, type ThingEvent 
 export type { Trait };
 export const TRAITS: Trait[] = ["hat", "tie", "drink", "phone", "glasses", "cigar"];
 /** how the handler's line reads on screen */
-export const TRAIT_TEXT: Record<Trait, string> = { hat: "WEARING A HAT", tie: "WEARING A RED TIE", drink: "HOLDING A DRINK", phone: "ON THE PHONE", glasses: "WEARING GLASSES", cigar: "SMOKING" };
+export const TRAIT_TEXT: Record<Trait, string> = { hat: "WEARING A HAT", tie: "WEARING A RED TIE", drink: "HOLDING A DRINK", phone: "ON THE PHONE", glasses: "WEARING GLASSES", cigar: "SMOKING", sing: "SINGING", crown: "WEARING A CROWN", sword: "HOLDING A SWORD", cape: "WEARING A CAPE", skull: "HOLDING A SKULL" };
+/** what one of a crowd may have about them: it only makes them somebody (nobody is told to look for it) */
+const CROWD: Trait[] = ["hat", "glasses", "tie", "drink"];
 type Body = "male" | "female";
 
 /** metres per body cm of a head: a little larger than life, to read through the scope */
@@ -41,7 +43,11 @@ const VIEW: ViewFlags = { pressure: true, particles: true, grid: false, calipers
 const SKIN = mix(V.amber, V.white, 0.55), BONE = mix(V.white, V.amber, 0.12), ORGAN = V.pink, LUNG = mix(V.pink, V.blue, 0.45);
 const CLOTHES = [V.blue, V.green, V.pink, mix(V.blue, V.white, 0.5), mix(V.green, V.blue, 0.5), mix(V.pink, V.blue, 0.5)];
 /** the colour a sound is written in at the mouth */
-const SAY: Partial<Record<Kind, string>> = { chat: V.white, camp: V.white, phone: V.pink, scream: V.amber, shot: BLOOD };
+const SAY: Partial<Record<Kind, string>> = { chat: V.white, camp: V.white, phone: V.pink, scream: V.amber, shot: BLOOD, sing: V.pink };
+/** how loud the singer on a stage is, and how long she breathes between phrases (s) */
+const SING = 0.9, BREATH = 0.6;
+/** the most screams sounding at once: a houseful in flight is heard as a crowd, and each voice costs */
+const SCREAMS = 9;
 const FLY = 0.45;
 const Y = new THREE.Vector3(0, 1, 0), Z = new THREE.Vector3(0, 0, 1), X = new THREE.Vector3(1, 0, 0);
 const WALK = 1.25, RUN = 3.3;
@@ -95,6 +101,12 @@ export interface Person {
   seed: number;
   strolls: boolean;
   strollIn: number;
+  /** one of the crowd: never the target */
+  crowd: boolean;
+  /** she sings (a stage's soprano): which phrase of the aria comes next, and how long until she starts it */
+  sings: boolean;
+  verse: number;
+  breathIn: number;
   talkIn: number;
   voice: Playing | null;
   /** this throat's own pitch (a playback rate) */
@@ -203,7 +215,8 @@ function arm(p: Person, side: 1 | -1): { S: P3; e: P3; h: P3; gx: number; gy: nu
   if (dead) {
     al += 1.5 * Math.min(1, p.fall * 2) * (side > 0 ? 1 : 0.7);
     out = 0.5;
-  } else if (side > 0 && p.trait === "drink" && !run) {
+  } else if (side > 0 && (p.trait === "drink" || p.trait === "sword" || p.trait === "skull") && !run) {
+    // (a glass, or a sword held upright, or a skull on the palm: the forearm is up)
     al = 0.2 + 0.25 * p.sip;
     bend = 1.7 + 0.75 * p.sip;
   } else if (side > 0 && p.trait === "phone" && !run) {
@@ -313,10 +326,10 @@ export class Cast {
   }
 
   /** People for a place: n of them, each with one thing of their own, `strollers` of them given to wandering. Returns the one to shoot. */
-  populate(place: Place, n: number, strollers: number): Person {
+  populate(place: Place, n: number, strollers: number, crowd = 0): Person {
     this.clear();
     this.place = place;
-    const SPOTS = place.spots, all = place.traits ?? TRAITS;
+    const SPOTS = place.spots, all = place.traits ?? TRAITS, sung = SPOTS.findIndex((s) => s.sings), places = SPOTS.filter((s) => !s.crowd).length;
     const shuffled = <T>(a: readonly T[]): T[] => {
       const b = [...a];
       for (let i = b.length - 1; i > 0; i--) {
@@ -325,10 +338,12 @@ export class Cast {
       }
       return b;
     };
-    n = Math.min(n, all.length, SPOTS.length);
+    n = Math.min(n, all.length, places);
     const traits = shuffled(all).slice(0, n), colors = shuffled(CLOTHES);
+    // (where there is a stage, somebody is singing on it)
+    if (sung >= 0 && !traits.includes("sing")) traits[0] = "sing";
     // (the places that must be filled come first, in their own order)
-    const order = shuffled(SPOTS.map((_, i) => i)), spots = [...order.filter((i) => SPOTS[i].must).sort((a, b) => a - b), ...order.filter((i) => !SPOTS[i].must)];
+    const order = shuffled(SPOTS.map((_, i) => i).filter((i) => !SPOTS[i].sings && !SPOTS[i].crowd)), spots = [...order.filter((i) => SPOTS[i].must).sort((a, b) => a - b), ...order.filter((i) => !SPOTS[i].must)];
     let musts = spots.filter((i) => SPOTS[i].must).length;
     const taken = new Set<number>();
     const take = (want: (s: Spot) => boolean): number => {
@@ -337,18 +352,15 @@ export class Cast {
       return i;
     };
     let left = strollers;
-    traits.forEach((trait, i) => {
-      // whoever is on the phone paces about; the rest take any place, the last few of them wandering
-      const must = musts-- > 0, strolls = !must && (trait === "phone" || left-- > 0);
-      const spot = must ? take((s) => !!s.must) : take((s) => (strolls ? !!s.open : true));
-      const body: Body = place.men || i === 0 ? "male" : i === 1 ? "female" : Math.random() < 0.5 ? "male" : "female";
+    const add = (trait: Trait, spot: number, body: Body, strolls: boolean, color: string): void => {
       const at = SPOTS[spot];
       const p: Person = {
-        body, s: this.models[body].tract.scale, trait, thing: thingOf(trait, this.models[body].tract.scale, HEAD * this.models[body].tract.scale), color: colors[i % colors.length], dress: body === "female",
+        body, s: this.models[body].tract.scale, trait, thing: thingOf(trait, this.models[body].tract.scale, HEAD * this.models[body].tract.scale), color, dress: body === "female",
         x: at.x, z: at.z, vx: 0, vz: 0, gy: place.floor(at.x, at.z), th: at.th + (at.route ? 0 : (Math.random() - 0.5) * 0.3),
         state: "calm", spot, route: at.route ? at.route.map((q) => ({ ...q })) : [], face: at.th, leaving: !!at.route, pace: at.pace ?? 1,
         sit: at.sit ? 1 : 0, gait: 0, phase: Math.random() * 6, t: 0, seed: Math.random() * 100,
         strolls: strolls && !!at.open, strollIn: 2 + Math.random() * 7,
+        crowd: !!at.crowd, sings: trait === "sing", verse: 1, breathIn: 0.8,
         talkIn: 0.4 + Math.random() * 3.5, voice: null, pitch: 0.92 + Math.random() * 0.18,
         react: 0, startled: 0, screamIn: 0,
         fall: 0, fallV: 0, down: false, fallAxis: new THREE.Vector3(1, 0, 0), pivot: 0, kick: 0, flash: 0, bleed: 0, wound: new THREE.Vector3(),
@@ -364,8 +376,18 @@ export class Cast {
       p.rig.holder.visible = true;
       this.pose(p);
       this.list.push(p);
+    };
+    traits.forEach((trait, i) => {
+      // the one who sings is a soprano, in white, at her mark
+      if (trait === "sing") return add(trait, sung, "female", false, V.white);
+      // whoever is on the phone paces about; the rest take any place, the last few of them wandering
+      const must = musts-- > 0, strolls = !must && (trait === "phone" || left-- > 0);
+      const spot = must ? take((s) => !!s.must) : take((s) => (strolls ? !!s.open : true));
+      add(trait, spot, place.men || i === 0 ? "male" : i === 1 ? "female" : Math.random() < 0.5 ? "male" : "female", strolls, colors[i % colors.length]);
     });
-    const marked = this.list.filter((p) => SPOTS[p.spot].mark), among = marked.length ? marked : this.list;
+    // the crowd, at the spots kept for them
+    shuffled(SPOTS.map((_, i) => i).filter((i) => SPOTS[i].crowd)).slice(0, crowd).forEach((spot, i) => add(CROWD[Math.floor(Math.random() * CROWD.length)], spot, Math.random() < 0.5 ? "male" : "female", false, colors[(n + i) % colors.length]));
+    const players = this.list.filter((p) => !p.crowd), marked = players.filter((p) => SPOTS[p.spot].mark), among = marked.length ? marked : players;
     return among[Math.floor(Math.random() * among.length)];
   }
 
@@ -375,7 +397,7 @@ export class Cast {
     this.things.update(dt, this.place);
     const SPOTS = this.place.spots;
     let talking = 0;
-    for (const p of this.list) if (p.voice && !p.voice.over && p.state === "calm") talking++;
+    for (const p of this.list) if (p.voice && !p.voice.over && p.state === "calm" && !p.sings) talking++;
     for (const p of this.list) {
       if (p.state === "gone") continue;
       p.t += dt;
@@ -402,10 +424,18 @@ export class Cast {
           p.bleed -= dt;
           if (Math.random() < dt * 22) this.fx.drip(p.wound.x + (Math.random() - 0.5) * 0.1, p.wound.y, p.wound.z + (Math.random() - 0.5) * 0.1);
         }
+      } else if (p.state === "calm" && p.sings) {
+        // the aria: phrase after phrase, a breath between, and round again (in tune: at the pitch it was written)
+        if (!p.voice && (p.breathIn -= dt) <= 0) {
+          const of = this.sound.clipsOf(p.body, "sing").length, clip = this.sound.clip(`${p.body}-sing-${p.verse}`);
+          if (clip) p.voice = this.sound.say(clip, p.headPos, 1, SING, this.place.hear);
+          p.verse = (p.verse % Math.max(1, of)) + 1;
+          p.breathIn = BREATH;
+        }
       } else if (p.state === "calm") {
         // talk now and then (two at once at most), with a hand
         p.talkIn -= dt;
-        if (p.talkIn <= 0 && !p.voice) {
+        if (p.talkIn <= 0 && !p.voice && this.place.chat) {
           if (talking < 2) {
             this.say(p, p.trait === "phone" ? "phone" : this.place.chat, 1);
             talking++;
@@ -440,13 +470,13 @@ export class Cast {
         if (p.react > 0) {
           p.react -= dt;
           if (p.react <= 0) {
-            this.say(p, "scream", 1.25);
+            if (this.screaming() < SCREAMS) this.say(p, "scream", 1.25);
             p.screamIn = 1.3 + Math.random() * 1.2;
             p.route = this.place.wayOut(p);
           }
         } else {
           p.screamIn -= dt;
-          if (p.screamIn <= 0 && !p.voice) {
+          if (p.screamIn <= 0 && !p.voice && this.screaming() < SCREAMS) {
             this.say(p, "scream", 1.25);
             p.screamIn = 1.4 + Math.random() * 1.4;
           }
@@ -500,13 +530,25 @@ export class Cast {
     p.voice = clip ? this.sound.say(clip, p.headPos, p.pitch * rate * (0.96 + 0.08 * Math.random()), level, this.place.hear) : null;
   }
 
+  private screaming(): number {
+    let n = 0;
+    for (const v of this.sound.voices) if (v.clip.kind === "scream") n++;
+    return n;
+  }
+
   /** the room goes quiet (the trigger has been pulled) */
   hush(): void {
     for (const p of this.list)
-      if (p.voice) {
+      if (p.voice && !(p.sings && p.state === "calm")) {
         this.sound.stop(p.voice, 0.12);
         p.voice = null;
       }
+  }
+
+  /** How loud the singing is just now, against its loudest (0 to 1); null where nobody sings. */
+  loud(): number | null {
+    const singer = this.list.find((p) => p.sings);
+    return singer ? (singer.state === "calm" ? this.sound.level(singer.voice) : 0) : null;
   }
 
   /** a shot has come through: everyone still standing understands, one after another */
@@ -801,6 +843,11 @@ export class Cast {
       hit("click", 0.9, 0.08 + 0.22 * loud);
       hit("K", 1.9, 0.04 + 0.1 * loud, 0.01);
     } else if (kind === "glasses") hit("t", 2.8, 0.05 + 0.1 * loud);
+    else if (kind === "crown" || kind === "sword") {
+      // metal on boards: a rimshot and a click, ringing higher for the crown
+      hit("K", kind === "crown" ? 2.3 : 1.7, 0.06 + 0.2 * loud);
+      hit("click", kind === "crown" ? 1.9 : 1.3, 0.05 + 0.15 * loud, 0.012);
+    } else if (kind === "skull") hit("K", 0.85, 0.06 + 0.18 * loud);
     else {
       // a cigar: a tick, and the first time its end throws sparks
       hit("t", 1.3, 0.03 + 0.04 * loud);
@@ -867,6 +914,17 @@ export class Cast {
         const c = at(0.97, 0.05 * s, side * 0.07 * s);
         L(c[0], c[1], c[2], v[0], v[1], v[2], cloth, 1.05);
       }
+    }
+    if (p.trait === "cape") {
+      // a cape: from the shoulders down the back to the knees, spreading as it falls
+      const red = flash ? V.white : V.red, hem: [number, number, number][] = [];
+      for (const k of [-1, -0.5, 0, 0.5, 1]) {
+        const a = at(0.96, -0.06 * s, k * 0.2 * s), b = at(-0.62, -(0.2 + 0.07 * (1 - Math.abs(k))) * s - 0.1 * p.gait, k * 0.36 * s);
+        L(a[0], a[1], a[2], b[0], b[1], b[2], red, k === 0 ? 0.85 : 1.3, 0.9);
+        hem.push(b);
+      }
+      for (let i = 0; i < hem.length - 1; i++) L(hem[i][0], hem[i][1], hem[i][2], hem[i + 1][0], hem[i + 1][1], hem[i + 1][2], red, 1.3, 0.9);
+      for (const side of [-1, 1]) L(at(0.96, -0.06 * s, side * 0.2 * s)[0], at(0.96, -0.06 * s, side * 0.2 * s)[1], at(0.96, -0.06 * s, side * 0.2 * s)[2], at(0.93, 0.1 * s, 0)[0], at(0.93, 0.1 * s, 0)[1], at(0.93, 0.1 * s, 0)[2], red, 1.3);
     }
     if (p.trait === "tie") {
       const a = at(0.93, 0.112 * s, 0), k = at(0.86, 0.128 * s, 0), b = at(0.5, 0.132 * s, 0), tip = at(0.4, 0.125 * s, 0), w = 0.034 * s;

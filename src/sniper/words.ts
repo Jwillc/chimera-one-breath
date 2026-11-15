@@ -5,6 +5,7 @@
 
 /** each cry as what comes before its vowel, the vowel (a letter, and how many to start with), and what follows */
 const SPELL: Record<string, [string, string, number, string]> = {
+  oo: ["", "O", 2, "H"],
   oh: ["", "O", 1, "H"],
   ah: ["", "A", 1, "H"],
   uh: ["", "U", 1, "H"],

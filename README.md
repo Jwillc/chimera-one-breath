@@ -31,7 +31,7 @@ more), at any zoom, and a touch on the view never fires: only the button does.
 
 ## The contracts
 
-Five places, one after another, then round again with more people in each.
+Six places, one after another, then round again with more people in each.
 
 1. **The condo.** A lit room in a tower, from the roof opposite.
 2. **The pool.** A hotel's roof deck, from a taller roof.
@@ -39,6 +39,16 @@ Five places, one after another, then round again with more people in each.
    the target is inside, the chance is gone.
 4. **The drive.** A café on the far bank of a river, from the back seat of a car that does not stop.
 5. **The woods.** Three men at a camp, from a ridge. A tree trunk stops a bullet.
+6. **The opera.** The stage of a full house, from the booth at the back of it. The target is one
+   of the players: the one who is singing, the one in the crown, the one with the sword, the one in
+   the cape, the one holding the skull. The crowd is all round them, in the boxes and the seats;
+   hit one of the guests in a box and it is the wrong target. The soprano's aria has no words. Fire
+   under her one long high note (the gauge marked ARIA says when) and nobody hears it: the house
+   goes on watching, and the shot is worth more. Fire at any other moment and the whole house is
+   on its feet, shouting, and rushing up the aisles for the doors. It opens on one of the audience
+   in the gallery, who takes a rifle out of a case at his feet and puts it together.
+
+Add `?contract=6` to the address to begin at a given contract.
 
 If the people are outside the scope's circle, small red marks on its rim point toward them (toward all
 of them alike: which one is yours is for you to find).
@@ -52,8 +62,8 @@ lost.
   camera, the gauges, the drive's opening shot.
 - `src/sniper/people.ts` is the people: wire bodies in clothes under a simulated head, with a
   skeleton, heart, lungs and brain that show only while a bullet goes through.
-- `src/sniper/place.ts` is what a place is; `condo.ts`, `pool.ts`, `steps.ts`, `drive.ts` and
-  `woods.ts` are the five.
+- `src/sniper/place.ts` is what a place is; `condo.ts`, `pool.ts`, `steps.ts`, `drive.ts`,
+  `woods.ts` and `opera.ts` are the six.
 - `src/sniper/things.ts` is the hat, glasses, cigar, glass and phone as small rigid bodies. Where
   one ends up is not scripted: it is let go with the speed of the place it sat and the push of the
   bullet that went by, and falls, tumbles, bounces, breaks, floats or sinks from there.
