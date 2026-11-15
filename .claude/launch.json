@@ -1,0 +1,17 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "one-breath-dev",
+      "runtimeExecutable": "bun",
+      "runtimeArgs": ["run", "dev"],
+      "port": 5337
+    },
+    {
+      "name": "one-breath-pages-preview",
+      "runtimeExecutable": "env",
+      "runtimeArgs": ["BASE_PATH=/chimera-one-breath/", "bunx", "vite", "preview", "--host", "127.0.0.1"],
+      "port": 5338
+    }
+  ]
+}

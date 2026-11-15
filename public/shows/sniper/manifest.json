@@ -1,0 +1,1770 @@
+{
+ "sampleRate": 48000,
+ "clips": [
+  {
+   "id": "male-chat-ha",
+   "kind": "chat",
+   "body": "male",
+   "say": "ha",
+   "words": [
+    [
+     0.1,
+     0.26,
+     "ha"
+    ],
+    [
+     0.26,
+     0.42,
+     "ha"
+    ],
+    [
+     0.42,
+     0.58,
+     "ha"
+    ],
+    [
+     0.58,
+     0.88,
+     "ha"
+    ]
+   ],
+   "wav": "male-chat-ha.wav",
+   "tele": "male-chat-ha.tele",
+   "start": 0.0491,
+   "end": 1.0123,
+   "gain": 1.014
+  },
+  {
+   "id": "male-chat-no",
+   "kind": "chat",
+   "body": "male",
+   "say": "no",
+   "words": [
+    [
+     0.1,
+     0.32,
+     "no"
+    ],
+    [
+     0.32,
+     0.54,
+     "no"
+    ],
+    [
+     0.54,
+     0.94,
+     "no"
+    ]
+   ],
+   "wav": "male-chat-no.wav",
+   "tele": "male-chat-no.tele",
+   "start": 0.0,
+   "end": 1.0566,
+   "gain": 1.118
+  },
+  {
+   "id": "male-chat-wine",
+   "kind": "chat",
+   "body": "male",
+   "say": "wine",
+   "words": [
+    [
+     0.1,
+     0.35,
+     "more"
+    ],
+    [
+     0.35,
+     0.8,
+     "wine"
+    ]
+   ],
+   "wav": "male-chat-wine.wav",
+   "tele": "male-chat-wine.tele",
+   "start": 0.0034,
+   "end": 0.9054,
+   "gain": 0.743
+  },
+  {
+   "id": "male-chat-view",
+   "kind": "chat",
+   "body": "male",
+   "say": "view",
+   "words": [
+    [
+     0.1,
+     0.28,
+     "what"
+    ],
+    [
+     0.28,
+     0.4,
+     "a"
+    ],
+    [
+     0.4,
+     0.9,
+     "view"
+    ]
+   ],
+   "wav": "male-chat-view.wav",
+   "tele": "male-chat-view.tele",
+   "start": 0.0043,
+   "end": 1.0162,
+   "gain": 1.257
+  },
+  {
+   "id": "male-chat-money",
+   "kind": "chat",
+   "body": "male",
+   "say": "money",
+   "words": [
+    [
+     0.1,
+     0.3,
+     "show"
+    ],
+    [
+     0.3,
+     0.46,
+     "me"
+    ],
+    [
+     0.46,
+     0.58,
+     "the"
+    ],
+    [
+     0.58,
+     0.78,
+     "mon"
+    ],
+    [
+     0.78,
+     1.13,
+     "ey"
+    ]
+   ],
+   "wav": "male-chat-money.wav",
+   "tele": "male-chat-money.tele",
+   "start": 0.0,
+   "end": 1.2704,
+   "gain": 1.061
+  },
+  {
+   "id": "male-chat-cheers",
+   "kind": "chat",
+   "body": "male",
+   "say": "cheers",
+   "words": [
+    [
+     0.1,
+     0.6,
+     "cheers"
+    ]
+   ],
+   "wav": "male-chat-cheers.wav",
+   "tele": "male-chat-cheers.tele",
+   "start": 0.0,
+   "end": 0.7068,
+   "gain": 0.872
+  },
+  {
+   "id": "male-chat-really",
+   "kind": "chat",
+   "body": "male",
+   "say": "really",
+   "words": [
+    [
+     0.1,
+     0.3,
+     "oh"
+    ],
+    [
+     0.3,
+     0.52,
+     "real"
+    ],
+    [
+     0.52,
+     0.87,
+     "ly"
+    ]
+   ],
+   "wav": "male-chat-really.wav",
+   "tele": "male-chat-really.tele",
+   "start": 0.0895,
+   "end": 0.9788,
+   "gain": 1.01
+  },
+  {
+   "id": "male-chat-said",
+   "kind": "chat",
+   "body": "male",
+   "say": "said",
+   "words": [
+    [
+     0.1,
+     0.3,
+     "so"
+    ],
+    [
+     0.3,
+     0.46,
+     "I"
+    ],
+    [
+     0.46,
+     0.68,
+     "said"
+    ],
+    [
+     0.68,
+     1.13,
+     "no"
+    ]
+   ],
+   "wav": "male-chat-said.wav",
+   "tele": "male-chat-said.tele",
+   "start": 0.0,
+   "end": 1.2456,
+   "gain": 1.052
+  },
+  {
+   "id": "male-chat-night",
+   "kind": "chat",
+   "body": "male",
+   "say": "night",
+   "words": [
+    [
+     0.1,
+     0.3,
+     "not"
+    ],
+    [
+     0.3,
+     0.45,
+     "to"
+    ],
+    [
+     0.45,
+     0.9,
+     "night"
+    ]
+   ],
+   "wav": "male-chat-night.wav",
+   "tele": "male-chat-night.tele",
+   "start": 0.0,
+   "end": 1.0044,
+   "gain": 1.356
+  },
+  {
+   "id": "male-chat-uhhuh",
+   "kind": "chat",
+   "body": "male",
+   "say": "uhhuh",
+   "words": [
+    [
+     0.1,
+     0.3,
+     "uh"
+    ],
+    [
+     0.3,
+     0.6,
+     "huh"
+    ]
+   ],
+   "wav": "male-chat-uhhuh.wav",
+   "tele": "male-chat-uhhuh.tele",
+   "start": 0.0898,
+   "end": 0.7053,
+   "gain": 0.782
+  },
+  {
+   "id": "male-camp-grid",
+   "kind": "camp",
+   "body": "male",
+   "say": "grid",
+   "words": [
+    [
+     0.1,
+     0.3,
+     "off"
+    ],
+    [
+     0.3,
+     0.42,
+     "the"
+    ],
+    [
+     0.42,
+     0.87,
+     "grid"
+    ]
+   ],
+   "wav": "male-camp-grid.wav",
+   "tele": "male-camp-grid.tele",
+   "start": 0.0875,
+   "end": 0.9738,
+   "gain": 1.334
+  },
+  {
+   "id": "male-camp-beans",
+   "kind": "camp",
+   "body": "male",
+   "say": "beans",
+   "words": [
+    [
+     0.1,
+     0.4,
+     "beans"
+    ],
+    [
+     0.4,
+     0.52,
+     "a"
+    ],
+    [
+     0.52,
+     0.92,
+     "gain"
+    ]
+   ],
+   "wav": "male-camp-beans.wav",
+   "tele": "male-camp-beans.tele",
+   "start": 0.0886,
+   "end": 1.0396,
+   "gain": 1.487
+  },
+  {
+   "id": "male-camp-anyday",
+   "kind": "camp",
+   "body": "male",
+   "say": "anyday",
+   "words": [
+    [
+     0.1,
+     0.26,
+     "an"
+    ],
+    [
+     0.26,
+     0.4,
+     "y"
+    ],
+    [
+     0.4,
+     0.65,
+     "day"
+    ],
+    [
+     0.65,
+     1.1,
+     "now"
+    ]
+   ],
+   "wav": "male-camp-anyday.wav",
+   "tele": "male-camp-anyday.tele",
+   "start": 0.0872,
+   "end": 1.2114,
+   "gain": 1.068
+  },
+  {
+   "id": "male-camp-hear",
+   "kind": "camp",
+   "body": "male",
+   "say": "hear",
+   "words": [
+    [
+     0.1,
+     0.24,
+     "did"
+    ],
+    [
+     0.24,
+     0.38,
+     "you"
+    ],
+    [
+     0.38,
+     0.63,
+     "hear"
+    ],
+    [
+     0.63,
+     1.03,
+     "that"
+    ]
+   ],
+   "wav": "male-camp-hear.wav",
+   "tele": "male-camp-hear.tele",
+   "start": 0.0,
+   "end": 1.1239,
+   "gain": 1.039
+  },
+  {
+   "id": "male-camp-ready",
+   "kind": "camp",
+   "body": "male",
+   "say": "ready",
+   "words": [
+    [
+     0.1,
+     0.35,
+     "stay"
+    ],
+    [
+     0.35,
+     0.55,
+     "read"
+    ],
+    [
+     0.55,
+     0.9,
+     "y"
+    ]
+   ],
+   "wav": "male-camp-ready.wav",
+   "tele": "male-camp-ready.tele",
+   "start": 0.0,
+   "end": 1.0105,
+   "gain": 1.141
+  },
+  {
+   "id": "male-phone-yes",
+   "kind": "phone",
+   "body": "male",
+   "say": "yes",
+   "words": [
+    [
+     0.1,
+     0.4,
+     "yes"
+    ]
+   ],
+   "wav": "male-phone-yes.wav",
+   "tele": "male-phone-yes.tele",
+   "start": 0.0102,
+   "end": 0.507,
+   "gain": 1.001
+  },
+  {
+   "id": "male-phone-howmuch",
+   "kind": "phone",
+   "body": "male",
+   "say": "howmuch",
+   "words": [
+    [
+     0.1,
+     0.3,
+     "how"
+    ],
+    [
+     0.3,
+     0.7,
+     "much"
+    ]
+   ],
+   "wav": "male-phone-howmuch.wav",
+   "tele": "male-phone-howmuch.tele",
+   "start": 0.0284,
+   "end": 0.7948,
+   "gain": 1.002
+  },
+  {
+   "id": "male-phone-callme",
+   "kind": "phone",
+   "body": "male",
+   "say": "callme",
+   "words": [
+    [
+     0.1,
+     0.3,
+     "call"
+    ],
+    [
+     0.3,
+     0.46,
+     "me"
+    ],
+    [
+     0.46,
+     0.86,
+     "back"
+    ]
+   ],
+   "wav": "male-phone-callme.wav",
+   "tele": "male-phone-callme.tele",
+   "start": 0.0,
+   "end": 0.9616,
+   "gain": 1.388
+  },
+  {
+   "id": "male-phone-doit",
+   "kind": "phone",
+   "body": "male",
+   "say": "doit",
+   "words": [
+    [
+     0.1,
+     0.3,
+     "do"
+    ],
+    [
+     0.3,
+     0.6,
+     "it"
+    ]
+   ],
+   "wav": "male-phone-doit.wav",
+   "tele": "male-phone-doit.tele",
+   "start": 0.0,
+   "end": 0.7045,
+   "gain": 1.346
+  },
+  {
+   "id": "male-phone-sell",
+   "kind": "phone",
+   "body": "male",
+   "say": "sell",
+   "words": [
+    [
+     0.1,
+     0.32,
+     "sell"
+    ],
+    [
+     0.32,
+     0.46,
+     "it"
+    ],
+    [
+     0.46,
+     0.91,
+     "all"
+    ]
+   ],
+   "wav": "male-phone-sell.wav",
+   "tele": "male-phone-sell.tele",
+   "start": 0.0,
+   "end": 1.0358,
+   "gain": 0.851
+  },
+  {
+   "id": "male-scream-ah",
+   "kind": "scream",
+   "body": "male",
+   "say": "ah",
+   "words": [
+    [
+     0.1,
+     1.2,
+     "ah"
+    ]
+   ],
+   "wav": "male-scream-ah.wav",
+   "tele": "male-scream-ah.tele",
+   "start": 0.0768,
+   "end": 1.3092,
+   "gain": 0.449
+  },
+  {
+   "id": "male-scream-no",
+   "kind": "scream",
+   "body": "male",
+   "say": "no",
+   "words": [
+    [
+     0.1,
+     0.85,
+     "no"
+    ]
+   ],
+   "wav": "male-scream-no.wav",
+   "tele": "male-scream-no.tele",
+   "start": 0.0,
+   "end": 0.9579,
+   "gain": 0.492
+  },
+  {
+   "id": "male-scream-run",
+   "kind": "scream",
+   "body": "male",
+   "say": "run",
+   "words": [
+    [
+     0.1,
+     0.5,
+     "run"
+    ]
+   ],
+   "wav": "male-scream-run.wav",
+   "tele": "male-scream-run.tele",
+   "start": 0.0085,
+   "end": 0.6109,
+   "gain": 0.497
+  },
+  {
+   "id": "male-scream-help",
+   "kind": "scream",
+   "body": "male",
+   "say": "help",
+   "words": [
+    [
+     0.1,
+     0.55,
+     "help"
+    ]
+   ],
+   "wav": "male-scream-help.wav",
+   "tele": "male-scream-help.tele",
+   "start": 0.0319,
+   "end": 0.6441,
+   "gain": 0.55
+  },
+  {
+   "id": "male-scream-getdown",
+   "kind": "scream",
+   "body": "male",
+   "say": "getdown",
+   "words": [
+    [
+     0.1,
+     0.28,
+     "get"
+    ],
+    [
+     0.28,
+     0.78,
+     "down"
+    ]
+   ],
+   "wav": "male-scream-getdown.wav",
+   "tele": "male-scream-getdown.tele",
+   "start": 0.0,
+   "end": 0.8883,
+   "gain": 0.49
+  },
+  {
+   "id": "male-shot-agh",
+   "kind": "shot",
+   "body": "male",
+   "say": "agh",
+   "words": [
+    [
+     0.1,
+     1.24,
+     "agh"
+    ]
+   ],
+   "wav": "male-shot-agh.wav",
+   "tele": "male-shot-agh.tele",
+   "start": 0.0805,
+   "end": 1.3502,
+   "gain": 0.545
+  },
+  {
+   "id": "male-shot-ugh",
+   "kind": "shot",
+   "body": "male",
+   "say": "ugh",
+   "words": [
+    [
+     0.1,
+     0.3,
+     "ugh"
+    ],
+    [
+     0.3,
+     1.1,
+     "uh"
+    ]
+   ],
+   "wav": "male-shot-ugh.wav",
+   "tele": "male-shot-ugh.tele",
+   "start": 0.0805,
+   "end": 1.21,
+   "gain": 0.526
+  },
+  {
+   "id": "male-shot-oof",
+   "kind": "shot",
+   "body": "male",
+   "say": "oof",
+   "words": [
+    [
+     0.1,
+     0.32,
+     "oof"
+    ],
+    [
+     0.32,
+     1.12,
+     "oh"
+    ]
+   ],
+   "wav": "male-shot-oof.wav",
+   "tele": "male-shot-oof.tele",
+   "start": 0.081,
+   "end": 1.2268,
+   "gain": 0.608
+  },
+  {
+   "id": "male-shot-ohh",
+   "kind": "shot",
+   "body": "male",
+   "say": "ohh",
+   "words": [
+    [
+     0.1,
+     1.3,
+     "oh"
+    ]
+   ],
+   "wav": "male-shot-ohh.wav",
+   "tele": "male-shot-ohh.tele",
+   "start": 0.0802,
+   "end": 1.4041,
+   "gain": 0.519
+  },
+  {
+   "id": "female-chat-ha",
+   "kind": "chat",
+   "body": "female",
+   "say": "ha",
+   "words": [
+    [
+     0.1,
+     0.26,
+     "ha"
+    ],
+    [
+     0.26,
+     0.42,
+     "ha"
+    ],
+    [
+     0.42,
+     0.58,
+     "ha"
+    ],
+    [
+     0.58,
+     0.88,
+     "ha"
+    ]
+   ],
+   "wav": "female-chat-ha.wav",
+   "tele": "female-chat-ha.tele",
+   "start": 0.1185,
+   "end": 0.9838,
+   "gain": 0.666
+  },
+  {
+   "id": "female-chat-no",
+   "kind": "chat",
+   "body": "female",
+   "say": "no",
+   "words": [
+    [
+     0.1,
+     0.32,
+     "no"
+    ],
+    [
+     0.32,
+     0.54,
+     "no"
+    ],
+    [
+     0.54,
+     0.94,
+     "no"
+    ]
+   ],
+   "wav": "female-chat-no.wav",
+   "tele": "female-chat-no.tele",
+   "start": 0.0,
+   "end": 1.0418,
+   "gain": 1.02
+  },
+  {
+   "id": "female-chat-wine",
+   "kind": "chat",
+   "body": "female",
+   "say": "wine",
+   "words": [
+    [
+     0.1,
+     0.35,
+     "more"
+    ],
+    [
+     0.35,
+     0.8,
+     "wine"
+    ]
+   ],
+   "wav": "female-chat-wine.wav",
+   "tele": "female-chat-wine.tele",
+   "start": 0.0359,
+   "end": 0.9053,
+   "gain": 0.601
+  },
+  {
+   "id": "female-chat-view",
+   "kind": "chat",
+   "body": "female",
+   "say": "view",
+   "words": [
+    [
+     0.1,
+     0.28,
+     "what"
+    ],
+    [
+     0.28,
+     0.4,
+     "a"
+    ],
+    [
+     0.4,
+     0.9,
+     "view"
+    ]
+   ],
+   "wav": "female-chat-view.wav",
+   "tele": "female-chat-view.tele",
+   "start": 0.0415,
+   "end": 1.0056,
+   "gain": 0.955
+  },
+  {
+   "id": "female-chat-money",
+   "kind": "chat",
+   "body": "female",
+   "say": "money",
+   "words": [
+    [
+     0.1,
+     0.3,
+     "show"
+    ],
+    [
+     0.3,
+     0.46,
+     "me"
+    ],
+    [
+     0.46,
+     0.58,
+     "the"
+    ],
+    [
+     0.58,
+     0.78,
+     "mon"
+    ],
+    [
+     0.78,
+     1.13,
+     "ey"
+    ]
+   ],
+   "wav": "female-chat-money.wav",
+   "tele": "female-chat-money.tele",
+   "start": 0.0,
+   "end": 1.2377,
+   "gain": 1.09
+  },
+  {
+   "id": "female-chat-cheers",
+   "kind": "chat",
+   "body": "female",
+   "say": "cheers",
+   "words": [
+    [
+     0.1,
+     0.6,
+     "cheers"
+    ]
+   ],
+   "wav": "female-chat-cheers.wav",
+   "tele": "female-chat-cheers.tele",
+   "start": 0.0,
+   "end": 0.6912,
+   "gain": 1.156
+  },
+  {
+   "id": "female-chat-really",
+   "kind": "chat",
+   "body": "female",
+   "say": "really",
+   "words": [
+    [
+     0.1,
+     0.3,
+     "oh"
+    ],
+    [
+     0.3,
+     0.52,
+     "real"
+    ],
+    [
+     0.52,
+     0.87,
+     "ly"
+    ]
+   ],
+   "wav": "female-chat-really.wav",
+   "tele": "female-chat-really.tele",
+   "start": 0.0893,
+   "end": 0.9755,
+   "gain": 0.682
+  },
+  {
+   "id": "female-chat-said",
+   "kind": "chat",
+   "body": "female",
+   "say": "said",
+   "words": [
+    [
+     0.1,
+     0.3,
+     "so"
+    ],
+    [
+     0.3,
+     0.46,
+     "I"
+    ],
+    [
+     0.46,
+     0.68,
+     "said"
+    ],
+    [
+     0.68,
+     1.13,
+     "no"
+    ]
+   ],
+   "wav": "female-chat-said.wav",
+   "tele": "female-chat-said.tele",
+   "start": 0.0,
+   "end": 1.2321,
+   "gain": 0.982
+  },
+  {
+   "id": "female-chat-night",
+   "kind": "chat",
+   "body": "female",
+   "say": "night",
+   "words": [
+    [
+     0.1,
+     0.3,
+     "not"
+    ],
+    [
+     0.3,
+     0.45,
+     "to"
+    ],
+    [
+     0.45,
+     0.9,
+     "night"
+    ]
+   ],
+   "wav": "female-chat-night.wav",
+   "tele": "female-chat-night.tele",
+   "start": 0.0,
+   "end": 0.987,
+   "gain": 0.893
+  },
+  {
+   "id": "female-chat-uhhuh",
+   "kind": "chat",
+   "body": "female",
+   "say": "uhhuh",
+   "words": [
+    [
+     0.1,
+     0.3,
+     "uh"
+    ],
+    [
+     0.3,
+     0.6,
+     "huh"
+    ]
+   ],
+   "wav": "female-chat-uhhuh.wav",
+   "tele": "female-chat-uhhuh.tele",
+   "start": 0.0885,
+   "end": 0.7061,
+   "gain": 0.685
+  },
+  {
+   "id": "female-camp-grid",
+   "kind": "camp",
+   "body": "female",
+   "say": "grid",
+   "words": [
+    [
+     0.1,
+     0.3,
+     "off"
+    ],
+    [
+     0.3,
+     0.42,
+     "the"
+    ],
+    [
+     0.42,
+     0.87,
+     "grid"
+    ]
+   ],
+   "wav": "female-camp-grid.wav",
+   "tele": "female-camp-grid.tele",
+   "start": 0.0865,
+   "end": 0.9587,
+   "gain": 1.369
+  },
+  {
+   "id": "female-camp-beans",
+   "kind": "camp",
+   "body": "female",
+   "say": "beans",
+   "words": [
+    [
+     0.1,
+     0.4,
+     "beans"
+    ],
+    [
+     0.4,
+     0.52,
+     "a"
+    ],
+    [
+     0.52,
+     0.92,
+     "gain"
+    ]
+   ],
+   "wav": "female-camp-beans.wav",
+   "tele": "female-camp-beans.tele",
+   "start": 0.0888,
+   "end": 1.0281,
+   "gain": 1.616
+  },
+  {
+   "id": "female-camp-anyday",
+   "kind": "camp",
+   "body": "female",
+   "say": "anyday",
+   "words": [
+    [
+     0.1,
+     0.26,
+     "an"
+    ],
+    [
+     0.26,
+     0.4,
+     "y"
+    ],
+    [
+     0.4,
+     0.65,
+     "day"
+    ],
+    [
+     0.65,
+     1.1,
+     "now"
+    ]
+   ],
+   "wav": "female-camp-anyday.wav",
+   "tele": "female-camp-anyday.tele",
+   "start": 0.0879,
+   "end": 1.2043,
+   "gain": 0.894
+  },
+  {
+   "id": "female-camp-hear",
+   "kind": "camp",
+   "body": "female",
+   "say": "hear",
+   "words": [
+    [
+     0.1,
+     0.24,
+     "did"
+    ],
+    [
+     0.24,
+     0.38,
+     "you"
+    ],
+    [
+     0.38,
+     0.63,
+     "hear"
+    ],
+    [
+     0.63,
+     1.03,
+     "that"
+    ]
+   ],
+   "wav": "female-camp-hear.wav",
+   "tele": "female-camp-hear.tele",
+   "start": 0.1886,
+   "end": 1.1154,
+   "gain": 1.072
+  },
+  {
+   "id": "female-camp-ready",
+   "kind": "camp",
+   "body": "female",
+   "say": "ready",
+   "words": [
+    [
+     0.1,
+     0.35,
+     "stay"
+    ],
+    [
+     0.35,
+     0.55,
+     "read"
+    ],
+    [
+     0.55,
+     0.9,
+     "y"
+    ]
+   ],
+   "wav": "female-camp-ready.wav",
+   "tele": "female-camp-ready.tele",
+   "start": 0.0,
+   "end": 1.0042,
+   "gain": 0.824
+  },
+  {
+   "id": "female-phone-yes",
+   "kind": "phone",
+   "body": "female",
+   "say": "yes",
+   "words": [
+    [
+     0.1,
+     0.4,
+     "yes"
+    ]
+   ],
+   "wav": "female-phone-yes.wav",
+   "tele": "female-phone-yes.tele",
+   "start": 0.046,
+   "end": 0.4921,
+   "gain": 0.931
+  },
+  {
+   "id": "female-phone-howmuch",
+   "kind": "phone",
+   "body": "female",
+   "say": "howmuch",
+   "words": [
+    [
+     0.1,
+     0.3,
+     "how"
+    ],
+    [
+     0.3,
+     0.7,
+     "much"
+    ]
+   ],
+   "wav": "female-phone-howmuch.wav",
+   "tele": "female-phone-howmuch.tele",
+   "start": 0.1181,
+   "end": 0.6544,
+   "gain": 0.639
+  },
+  {
+   "id": "female-phone-callme",
+   "kind": "phone",
+   "body": "female",
+   "say": "callme",
+   "words": [
+    [
+     0.1,
+     0.3,
+     "call"
+    ],
+    [
+     0.3,
+     0.46,
+     "me"
+    ],
+    [
+     0.46,
+     0.86,
+     "back"
+    ]
+   ],
+   "wav": "female-phone-callme.wav",
+   "tele": "female-phone-callme.tele",
+   "start": 0.0,
+   "end": 0.9474,
+   "gain": 0.82
+  },
+  {
+   "id": "female-phone-doit",
+   "kind": "phone",
+   "body": "female",
+   "say": "doit",
+   "words": [
+    [
+     0.1,
+     0.3,
+     "do"
+    ],
+    [
+     0.3,
+     0.6,
+     "it"
+    ]
+   ],
+   "wav": "female-phone-doit.wav",
+   "tele": "female-phone-doit.tele",
+   "start": 0.0,
+   "end": 0.6875,
+   "gain": 1.142
+  },
+  {
+   "id": "female-phone-sell",
+   "kind": "phone",
+   "body": "female",
+   "say": "sell",
+   "words": [
+    [
+     0.1,
+     0.32,
+     "sell"
+    ],
+    [
+     0.32,
+     0.46,
+     "it"
+    ],
+    [
+     0.46,
+     0.91,
+     "all"
+    ]
+   ],
+   "wav": "female-phone-sell.wav",
+   "tele": "female-phone-sell.tele",
+   "start": 0.0,
+   "end": 1.0141,
+   "gain": 0.927
+  },
+  {
+   "id": "female-scream-ah",
+   "kind": "scream",
+   "body": "female",
+   "say": "ah",
+   "words": [
+    [
+     0.1,
+     1.2,
+     "ah"
+    ]
+   ],
+   "wav": "female-scream-ah.wav",
+   "tele": "female-scream-ah.tele",
+   "start": 0.0769,
+   "end": 1.3171,
+   "gain": 0.519
+  },
+  {
+   "id": "female-scream-no",
+   "kind": "scream",
+   "body": "female",
+   "say": "no",
+   "words": [
+    [
+     0.1,
+     0.85,
+     "no"
+    ]
+   ],
+   "wav": "female-scream-no.wav",
+   "tele": "female-scream-no.tele",
+   "start": 0.0246,
+   "end": 0.9716,
+   "gain": 0.453
+  },
+  {
+   "id": "female-scream-run",
+   "kind": "scream",
+   "body": "female",
+   "say": "run",
+   "words": [
+    [
+     0.1,
+     0.5,
+     "run"
+    ]
+   ],
+   "wav": "female-scream-run.wav",
+   "tele": "female-scream-run.tele",
+   "start": 0.026,
+   "end": 0.6206,
+   "gain": 0.558
+  },
+  {
+   "id": "female-scream-help",
+   "kind": "scream",
+   "body": "female",
+   "say": "help",
+   "words": [
+    [
+     0.1,
+     0.55,
+     "help"
+    ]
+   ],
+   "wav": "female-scream-help.wav",
+   "tele": "female-scream-help.tele",
+   "start": 0.1118,
+   "end": 0.6691,
+   "gain": 0.551
+  },
+  {
+   "id": "female-scream-getdown",
+   "kind": "scream",
+   "body": "female",
+   "say": "getdown",
+   "words": [
+    [
+     0.1,
+     0.28,
+     "get"
+    ],
+    [
+     0.28,
+     0.78,
+     "down"
+    ]
+   ],
+   "wav": "female-scream-getdown.wav",
+   "tele": "female-scream-getdown.tele",
+   "start": 0.0853,
+   "end": 0.8979,
+   "gain": 0.551
+  },
+  {
+   "id": "female-shot-agh",
+   "kind": "shot",
+   "body": "female",
+   "say": "agh",
+   "words": [
+    [
+     0.1,
+     1.24,
+     "agh"
+    ]
+   ],
+   "wav": "female-shot-agh.wav",
+   "tele": "female-shot-agh.tele",
+   "start": 0.0799,
+   "end": 1.3483,
+   "gain": 0.551
+  },
+  {
+   "id": "female-shot-ugh",
+   "kind": "shot",
+   "body": "female",
+   "say": "ugh",
+   "words": [
+    [
+     0.1,
+     0.3,
+     "ugh"
+    ],
+    [
+     0.3,
+     1.1,
+     "uh"
+    ]
+   ],
+   "wav": "female-shot-ugh.wav",
+   "tele": "female-shot-ugh.tele",
+   "start": 0.08,
+   "end": 1.2081,
+   "gain": 0.509
+  },
+  {
+   "id": "female-shot-oof",
+   "kind": "shot",
+   "body": "female",
+   "say": "oof",
+   "words": [
+    [
+     0.1,
+     0.32,
+     "oof"
+    ],
+    [
+     0.32,
+     1.12,
+     "oh"
+    ]
+   ],
+   "wav": "female-shot-oof.wav",
+   "tele": "female-shot-oof.tele",
+   "start": 0.0805,
+   "end": 1.2278,
+   "gain": 0.678
+  },
+  {
+   "id": "female-shot-ohh",
+   "kind": "shot",
+   "body": "female",
+   "say": "ohh",
+   "words": [
+    [
+     0.1,
+     1.3,
+     "oh"
+    ]
+   ],
+   "wav": "female-shot-ohh.wav",
+   "tele": "female-shot-ohh.tele",
+   "start": 0.0812,
+   "end": 1.4025,
+   "gain": 0.516
+  },
+  {
+   "id": "intro",
+   "kind": "line",
+   "body": "female",
+   "say": "Eyes on the lit window.",
+   "words": [],
+   "wav": "intro.wav",
+   "start": 0.0786,
+   "end": 1.4744,
+   "gain": 1.257
+  },
+  {
+   "id": "intro-pool",
+   "kind": "line",
+   "body": "female",
+   "say": "Eyes on the pool, below you.",
+   "words": [],
+   "wav": "intro-pool.wav",
+   "start": 0.0786,
+   "end": 2.13,
+   "gain": 1.338
+  },
+  {
+   "id": "intro-steps",
+   "kind": "line",
+   "body": "female",
+   "say": "Eyes on the steps. They are going in.",
+   "words": [],
+   "wav": "intro-steps.wav",
+   "start": 0.0788,
+   "end": 2.4942,
+   "gain": 1.173
+  },
+  {
+   "id": "intro-drive",
+   "kind": "line",
+   "body": "female",
+   "say": "Eyes on the far bank. We are not stopping.",
+   "words": [],
+   "wav": "intro-drive.wav",
+   "start": 0.0787,
+   "end": 3.1698,
+   "gain": 0.928
+  },
+  {
+   "id": "intro-woods",
+   "kind": "line",
+   "body": "female",
+   "say": "Eyes on the camp, through the trees.",
+   "words": [],
+   "wav": "intro-woods.wav",
+   "start": 0.0787,
+   "end": 2.3835,
+   "gain": 1.202
+  },
+  {
+   "id": "brief-hat",
+   "kind": "line",
+   "body": "female",
+   "say": "Your target is wearing a hat.",
+   "words": [],
+   "wav": "brief-hat.wav",
+   "start": 0.0801,
+   "end": 1.8852,
+   "gain": 0.985
+  },
+  {
+   "id": "brief-tie",
+   "kind": "line",
+   "body": "female",
+   "say": "Your target is wearing a red tie.",
+   "words": [],
+   "wav": "brief-tie.wav",
+   "start": 0.08,
+   "end": 2.1722,
+   "gain": 1.04
+  },
+  {
+   "id": "brief-drink",
+   "kind": "line",
+   "body": "female",
+   "say": "Your target is holding a drink.",
+   "words": [],
+   "wav": "brief-drink.wav",
+   "start": 0.0799,
+   "end": 2.0197,
+   "gain": 1.09
+  },
+  {
+   "id": "brief-phone",
+   "kind": "line",
+   "body": "female",
+   "say": "Your target is on the phone.",
+   "words": [],
+   "wav": "brief-phone.wav",
+   "start": 0.0799,
+   "end": 1.7178,
+   "gain": 1.039
+  },
+  {
+   "id": "brief-glasses",
+   "kind": "line",
+   "body": "female",
+   "say": "Your target is wearing glasses.",
+   "words": [],
+   "wav": "brief-glasses.wav",
+   "start": 0.0799,
+   "end": 2.0211,
+   "gain": 1.006
+  },
+  {
+   "id": "brief-cigar",
+   "kind": "line",
+   "body": "female",
+   "say": "Your target is smoking.",
+   "words": [],
+   "wav": "brief-cigar.wav",
+   "start": 0.0799,
+   "end": 1.6242,
+   "gain": 1.013
+  },
+  {
+   "id": "go",
+   "kind": "line",
+   "body": "female",
+   "say": "One breath. One shot.",
+   "words": [],
+   "wav": "go.wav",
+   "start": 0.082,
+   "end": 1.9429,
+   "gain": 0.975
+  },
+  {
+   "id": "win-1",
+   "kind": "line",
+   "body": "female",
+   "say": "Target down.",
+   "words": [],
+   "wav": "win-1.wav",
+   "start": 0.0494,
+   "end": 1.1661,
+   "gain": 0.961
+  },
+  {
+   "id": "win-2",
+   "kind": "line",
+   "body": "female",
+   "say": "Good shot. Target down.",
+   "words": [],
+   "wav": "win-2.wav",
+   "start": 0.048,
+   "end": 2.2505,
+   "gain": 0.98
+  },
+  {
+   "id": "win-3",
+   "kind": "line",
+   "body": "female",
+   "say": "Clean. Go home.",
+   "words": [],
+   "wav": "win-3.wav",
+   "start": 0.0468,
+   "end": 1.694,
+   "gain": 1.553
+  },
+  {
+   "id": "wrong-1",
+   "kind": "line",
+   "body": "female",
+   "say": "That was the wrong one.",
+   "words": [],
+   "wav": "wrong-1.wav",
+   "start": 0.0816,
+   "end": 1.3916,
+   "gain": 1.145
+  },
+  {
+   "id": "wrong-2",
+   "kind": "line",
+   "body": "female",
+   "say": "Wrong target. We are done.",
+   "words": [],
+   "wav": "wrong-2.wav",
+   "start": 0.0725,
+   "end": 2.1087,
+   "gain": 1.009
+  },
+  {
+   "id": "miss-1",
+   "kind": "line",
+   "body": "female",
+   "say": "You missed.",
+   "words": [],
+   "wav": "miss-1.wav",
+   "start": 0.0795,
+   "end": 0.8307,
+   "gain": 1.579
+  },
+  {
+   "id": "miss-2",
+   "kind": "line",
+   "body": "female",
+   "say": "Missed. They are running.",
+   "words": [],
+   "wav": "miss-2.wav",
+   "start": 0.0833,
+   "end": 1.7642,
+   "gain": 1.286
+  },
+  {
+   "id": "gone",
+   "kind": "line",
+   "body": "female",
+   "say": "The target is gone.",
+   "words": [],
+   "wav": "gone.wav",
+   "start": 0.0818,
+   "end": 1.3862,
+   "gain": 0.911
+  },
+  {
+   "id": "empty",
+   "kind": "line",
+   "body": "female",
+   "say": "You are out of rounds.",
+   "words": [],
+   "wav": "empty.wav",
+   "start": 0.0798,
+   "end": 1.4268,
+   "gain": 1.153
+  }
+ ],
+ "kit": {
+  "pyew": {
+   "wav": "kit-pyew.wav",
+   "start": 0.0554,
+   "end": 1.5135,
+   "gain": 0.977
+  },
+  "breath-in": {
+   "wav": "kit-breath-in.wav",
+   "start": 0.0,
+   "end": 1.1771,
+   "gain": 9.327
+  },
+  "breath-out": {
+   "wav": "kit-breath-out.wav",
+   "start": 0.0,
+   "end": 1.3669,
+   "gain": 27.929
+  },
+  "hiss": {
+   "wav": "kit-hiss.wav",
+   "start": 0.0565,
+   "end": 2.4718,
+   "gain": 9.123
+  },
+  "B": {
+   "wav": "kit-B.wav",
+   "start": 0.1026,
+   "end": 0.4824,
+   "gain": 3.666
+  },
+  "K": {
+   "wav": "kit-K.wav",
+   "start": 0.12,
+   "end": 0.5,
+   "gain": 3.504
+  },
+  "Pf": {
+   "wav": "kit-Pf.wav",
+   "start": 0.2246,
+   "end": 0.4928,
+   "gain": 2.544
+  },
+  "kch": {
+   "wav": "kit-kch.wav",
+   "start": 0.136,
+   "end": 0.5,
+   "gain": 7.774
+  },
+  "t": {
+   "wav": "kit-t.wav",
+   "start": 0.1319,
+   "end": 0.4877,
+   "gain": 7.604
+  },
+  "tss": {
+   "wav": "kit-tss.wav",
+   "start": 0.1319,
+   "end": 0.5,
+   "gain": 8.305
+  },
+  "inK": {
+   "wav": "kit-inK.wav",
+   "start": 0.1371,
+   "end": 0.5,
+   "gain": 7.959
+  },
+  "pop": {
+   "wav": "kit-pop.wav",
+   "start": 0.065,
+   "end": 0.4582,
+   "gain": 9.843
+  },
+  "click": {
+   "wav": "kit-click.wav",
+   "start": 0.0643,
+   "end": 0.4394,
+   "gain": 1.038
+  }
+ }
+}

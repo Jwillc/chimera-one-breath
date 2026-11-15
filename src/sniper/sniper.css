@@ -1,0 +1,68 @@
+/* One Breath's card (the title, a contract's result, the pause): the shared game card
+   (.fps-card in ui/styles.css) set to be read over a lit scene. The synth's light single-stroke
+   face reads grey at text sizes, so the words are in Archivo, white on a nearly solid black;
+   what a button does is said in dark on amber. */
+.fps-card.sniper-card {
+  width: min(540px, calc(100vw - 32px));
+  gap: 16px;
+  padding: 30px 34px 26px;
+  background: rgba(0, 0, 0, 0.95);
+  border-color: var(--blue-mid);
+  box-shadow: 0 0 24px rgba(0, 0, 0, 0.9);
+  font-family: "Archivo", system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-stretch: 87.5%;
+  letter-spacing: 0.02em;
+}
+.sniper-card .wordmark {
+  font-family: var(--font);
+  font-size: 15px;
+  color: var(--blue);
+}
+.sniper-card h1 {
+  font-stretch: 100%;
+  font-size: 40px;
+  font-weight: 800;
+  line-height: 1.1;
+  letter-spacing: 0.18em;
+  margin-right: -0.18em;
+  text-shadow: 0 0 18px rgba(255, 179, 64, 0.45);
+}
+.sniper-card p {
+  color: var(--white);
+  font-size: 17px;
+  font-weight: 450;
+  line-height: 1.5;
+}
+.sniper-card .hint {
+  color: var(--blue);
+  font-size: 15px;
+  font-weight: 500;
+}
+.sniper-card .error {
+  color: #ffc9bb;
+  font-size: 15px;
+}
+.sniper-card code {
+  color: var(--amber);
+}
+.sniper-card button.primary.large {
+  margin: 4px 0;
+  padding: 12px 34px;
+  background: var(--amber);
+  border-color: var(--amber);
+  color: #0a0a0a;
+  font-family: inherit;
+  font-size: 16px;
+  font-weight: 750;
+  letter-spacing: 0.16em;
+  text-shadow: none;
+  box-shadow: 0 0 14px rgba(255, 179, 64, 0.4);
+}
+.sniper-card button.primary.large:hover {
+  background: #ffc569;
+}
+.sniper-card button.primary.large:disabled {
+  background: transparent;
+  color: var(--amber);
+  box-shadow: none;
+}
