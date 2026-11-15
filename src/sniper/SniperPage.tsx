@@ -51,23 +51,31 @@ function Pad({ game }: { game: Game }) {
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
   }, [game]);
-  /** a button that acts when the finger lands (not when it lifts), and may act again when it leaves */
-  const press = (down: () => void, up?: () => void) => ({
-    onPointerDown: (e: ReactPointerEvent<HTMLButtonElement>) => {
-      e.preventDefault();
-      try {
-        // keep the finger's later moves coming here even if it slides off (some pointers cannot be captured)
-        e.currentTarget.setPointerCapture(e.pointerId);
-      } catch {
-        // then lifting it elsewhere is missed, and the next touch puts it right
-      }
-      down();
-    },
-    onPointerUp: up,
-    onPointerCancel: up,
-    onLostPointerCapture: up,
-    onContextMenu: (e: { preventDefault(): void }) => e.preventDefault(),
-  });
+  /** a button that acts when the finger lands (not when it lifts), may act again when it leaves, and is lit while it is held */
+  const press = (down: () => void, up?: () => void) => {
+    const lift = (e: ReactPointerEvent<HTMLButtonElement>) => {
+      if (!e.currentTarget.classList.contains("held")) return;
+      e.currentTarget.classList.remove("held");
+      up?.();
+    };
+    return {
+      onPointerDown: (e: ReactPointerEvent<HTMLButtonElement>) => {
+        e.preventDefault();
+        try {
+          // keep the finger's later moves coming here even if it slides off (some pointers cannot be captured)
+          e.currentTarget.setPointerCapture(e.pointerId);
+        } catch {
+          // then lifting it elsewhere is missed, and the next touch puts it right
+        }
+        e.currentTarget.classList.add("held");
+        down();
+      },
+      onPointerUp: lift,
+      onPointerCancel: lift,
+      onLostPointerCapture: lift,
+      onContextMenu: (e: { preventDefault(): void }) => e.preventDefault(),
+    };
+  };
   return (
     <div className="sniper-pad" ref={root} data-layout="overlay">
       <div className="sniper-pad-side">

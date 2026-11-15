@@ -165,7 +165,8 @@
   text-transform: uppercase;
   -webkit-tap-highlight-color: transparent;
 }
-.sniper-pad button:active {
+.sniper-pad button:active,
+.sniper-pad button.held {
   background: rgba(79, 182, 242, 0.3);
 }
 .sniper-pad .sniper-pad-small {
@@ -231,9 +232,43 @@
   font-weight: 800;
   box-shadow: 0 0 14px rgba(255, 179, 64, 0.35);
 }
-.sniper-pad .sniper-pad-fire:active {
+.sniper-pad .sniper-pad-fire:active,
+.sniper-pad .sniper-pad-fire.held {
   background: var(--amber);
   color: #0a0a0a;
+}
+.sniper-pad .sniper-pad-fire.held .sniper-pad-rounds i {
+  background: #0a0a0a;
+}
+/* a short upright screen: smaller buttons, so the zoom's do not reach up into the scope's circle */
+@media (orientation: portrait) and (max-height: 760px) {
+  .sniper-pad {
+    padding: 8px 12px 12px;
+  }
+  .sniper-pad-side {
+    gap: 8px;
+  }
+  .sniper-pad-zoom {
+    gap: 8px;
+  }
+  .sniper-pad-zoom button {
+    width: 48px;
+    height: 48px;
+    font-size: 26px;
+  }
+  .sniper-pad .sniper-pad-small {
+    width: 44px;
+    height: 44px;
+  }
+  .sniper-pad .sniper-pad-breath {
+    width: 100px;
+    height: 88px;
+  }
+  .sniper-pad .sniper-pad-fire {
+    width: 90px;
+    height: 90px;
+    font-size: 17px;
+  }
 }
 /* the rounds left, on the trigger */
 .sniper-pad-rounds {

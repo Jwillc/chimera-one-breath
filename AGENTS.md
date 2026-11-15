@@ -59,7 +59,12 @@ head)` puts the crosshair on someone and `fire()` shoots; `debugLook(yaw, pitch,
 scope. `debug` has the cast (`debug.cast.list`, `debug.cast.things.list`), the place, the shot and
 the opening (`debug.intro`).
 
-`tools/sniper-trailer.ts` records a scripted player; it knows only the condo's geometry.
+The trailer: `bun tools/trailer-film.ts out/trailer` films takes in phone layout frame by frame on a
+clock it owns (a scripted player using real touch events, each finger shown as a ring), with the
+game's own sound rendered offline in step with the picture; `uv run tools/trailer-cut.py out/trailer`
+cuts them, with the words over the picture and the last card, into `out/trailer/one-breath-trailer.mp4`.
+`out/` is not committed. (`tools/sniper-trailer.ts` is the older live recorder; it knows only the
+condo's geometry.)
 
 Nobody can hear the sounds or feel the mouse from a scripted run: say so when reporting.
 

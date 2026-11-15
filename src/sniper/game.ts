@@ -224,6 +224,8 @@ export class Game {
   private w = 1;
   private h = 1;
   private dpr = 1;
+  /** the most canvas pixels to a CSS pixel: more than this costs a phone frames for nothing seen (a film of the game asks for more) */
+  private maxDpr = 1.5;
   private clock = 0;
 
   private phase: Phase = "menu";
@@ -554,7 +556,7 @@ export class Game {
     const b = this.canvas.getBoundingClientRect();
     this.w = Math.max(1, b.width);
     this.h = Math.max(1, b.height);
-    this.dpr = Math.min(1.5, window.devicePixelRatio || 1);
+    this.dpr = Math.min(this.maxDpr, window.devicePixelRatio || 1);
     this.canvas.width = Math.round(this.w * this.dpr);
     this.canvas.height = Math.round(this.h * this.dpr);
     this.gl.setPixelRatio(this.dpr);
@@ -704,8 +706,10 @@ export class Game {
     cam.lookAt(c.lerp(eye, 0.8 * k));
     cam.position.lerp(eye, u);
     cam.quaternion.slerp(this.tmpQ.setFromEuler(this.tmpE.set(this.aim.pitch, this.aim.yaw, 0, "YXZ")), u);
+    // on an upright screen the view is opened up, so the car is as wide in it as on one lying down
+    const wide = (Math.atan(Math.tan((23 * Math.PI) / 180) * Math.min(1.9, Math.max(1, 1 / cam.aspect))) * 360) / Math.PI;
     // (the glass's own narrow view arrives late, so that the way in is seen)
-    cam.fov = 46 * (this.fov / 46) ** (u * u);
+    cam.fov = wide * (this.fov / wide) ** (u * u);
   }
 
   /** during the opening: the rifle where it is held, whoever holds it, and the head of whoever else is with them */
