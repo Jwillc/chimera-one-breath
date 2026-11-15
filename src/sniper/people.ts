@@ -281,7 +281,7 @@ export class Cast {
   }
 
   /** A head for someone who is not one of the cast (the i-th such): here, turned so and this size (m per body cm), for this frame. */
-  extra(i: number, pos: THREE.Vector3, q: THREE.Quaternion, cam: THREE.Vector3, dt: number, scale: number): void {
+  extra(i: number, pos: THREE.Vector3, q: THREE.Quaternion, cam: THREE.Vector3, dt: number, scale: number, voice: Playing | null = null): void {
     const rig = (this.extras[i] ??= this.newRig("male")), h = rig.holder;
     h.position.copy(pos);
     h.quaternion.copy(q);
@@ -289,8 +289,10 @@ export class Cast {
     h.visible = true;
     h.updateMatrixWorld(true);
     rig.r.camera.position.copy(cam);
-    rig.r.face.update(null, dt);
-    rig.r.update(rig.model, rig.model.frame(NEUTRAL), NEUTRAL, null, VIEW, dt);
+    // (it speaks, if it is given a voice that is sounding)
+    const tele = this.sound.tele(voice), a = tele ? VoiceModel.articFromArray(tele.t.artic) : NEUTRAL;
+    rig.r.face.update(tele, dt);
+    rig.r.update(rig.model, rig.model.frame(a), a, tele, VIEW, dt);
   }
 
   /** (they are shown only in the frames that ask for them) */

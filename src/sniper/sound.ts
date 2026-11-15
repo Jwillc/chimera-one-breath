@@ -12,7 +12,7 @@ import { spell } from "./words.ts";
 
 export type BodyName = "male" | "female";
 /** what a clip is (`sounds/compose.py`): the room's talk, the camp's, a phone call, a scream, a cry when shot, a phrase of the aria, a line of the handler's */
-export type Kind = "chat" | "camp" | "phone" | "scream" | "shot" | "sing" | "line";
+export type Kind = "chat" | "camp" | "phone" | "scream" | "shot" | "sing" | "line" | "home";
 /** a sung phrase's loudness is kept in steps this long (s) */
 const STEP = 0.05;
 

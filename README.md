@@ -56,6 +56,12 @@ Seven places, one after another, then round again with more people in each.
    stairs, and the view goes out to the roof to watch the arrest. It opens on the roof: someone comes to its edge at a crouch, puts the rifle together on one
    knee below the wall, and leans it over.
 
+After the last of them, before the round begins again, comes the way home, seen through the
+shooter's own eyes: along the corridor of a block of flats and in at a door, a poor small room
+with a window on the city; the rifle laid on the table, taken down part by part into its case; the
+bed, the ceiling; and then, from across the room, the whole of them lying there: "Another day,
+another contract." Then black, and the first place again.
+
 Add `?contract=7` to the address to begin at a given contract.
 
 If the people are outside the scope's circle, small red marks on its rim point toward them (toward all
@@ -72,7 +78,7 @@ lost.
   skeleton, heart, lungs and brain that show only while a bullet goes through.
 - `src/sniper/place.ts` is what a place is; `condo.ts`, `pool.ts`, `steps.ts`, `drive.ts`,
   `woods.ts`, `opera.ts` and `block.ts` are the seven. `looks.ts` is how a crowd of strangers is
-  dressed and how one of them is told from the rest.
+  dressed and how one of them is told from the rest. `ending.ts` is the way home after the last.
 - `src/sniper/things.ts` is the hat, glasses, cigar, glass and phone as small rigid bodies. Where
   one ends up is not scripted: it is let go with the speed of the place it sat and the push of the
   bullet that went by, and falls, tumbles, bounces, breaks, floats or sinks from there.

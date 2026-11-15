@@ -152,6 +152,18 @@ export class Beams {
     }
   }
 
+  /**
+   * Only what lies on the positive side of every one of these planes (in the world's own space) is
+   * drawn: for what is seen through an opening. The renderer's `localClippingEnabled` must be on.
+   * The planes may be moved afterwards; null: all of it is drawn again.
+   */
+  clip(planes: THREE.Plane[] | null): void {
+    for (const b of this.batches) {
+      b.material.clippingPlanes = planes;
+      b.material.needsUpdate = true;
+    }
+  }
+
   /** the canvas size in CSS px (the fat lines' widths are in CSS px) */
   setResolution(w: number, h: number): void {
     for (const b of this.batches) b.material.resolution.set(w, h);

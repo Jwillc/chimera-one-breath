@@ -117,7 +117,7 @@ function Pad({ game }: { game: Game }) {
 export function SniperPage() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [game, setGame] = useState<Game | null>(null);
-  const [snap, setSnap] = useState<Snapshot>({ phase: "menu", contract: 0, score: 0, locked: false, result: null, target: "", place: "", next: "", lost: "" });
+  const [snap, setSnap] = useState<Snapshot>({ phase: "menu", contract: 0, score: 0, locked: false, result: null, target: "", place: "", next: "", lost: "", home: false });
   const [loaded, setLoaded] = useState({ done: 0, of: 0 });
   const [error, setError] = useState<string | null>(null);
 
@@ -175,7 +175,7 @@ export function SniperPage() {
           ) : phase === "won" && result ? (
             <p>
               Contract {snap.contract}, {place(snap.place)}: {result.head ? "a head shot" : "a body shot"}
-              {result.unheard ? ", heard by nobody," : ""} after {result.seconds.toFixed(0)} seconds at the scope. {result.points} points, {snap.score} in all. Next: {place(snap.next)}.
+              {result.unheard ? ", heard by nobody," : ""} after {result.seconds.toFixed(0)} seconds at the scope. {result.points} points, {snap.score} in all. Next: {snap.home ? `home, and then ${place(snap.next)}` : place(snap.next)}.
             </p>
           ) : phase === "failed" && result ? (
             <p>

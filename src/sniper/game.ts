@@ -31,7 +31,8 @@ import * as THREE from "three";
 import { Beams } from "../ui/render/beams3d.ts";
 import { Glow, dot, ring, seg } from "../ui/render/vector.ts";
 import { V, mix } from "../ui/colors.ts";
-import { Sound } from "./sound.ts";
+import { Sound, type Playing } from "./sound.ts";
+import { Ending, HOME } from "./ending.ts";
 import { Fx, BLOOD } from "./fx.ts";
 import type { Crossing, Place } from "./place.ts";
 import { Condo } from "./condo.ts";
@@ -72,6 +73,8 @@ export interface Snapshot {
   place: string;
   next: string;
   lost: string;
+  /** this contract was the last of the places: before the next, the way home is shown */
+  home: boolean;
 }
 
 /** the places, in the order the contracts come to them */
@@ -112,6 +115,7 @@ const LINES: Record<string, string> = {
   "win-3": "Clean. Go home.",
   "wrong-1": "That was the wrong one.",
   "wrong-2": "Wrong target. We are done.",
+  "male-home-day": "Another day, another contract.",
   "miss-1": "You missed.",
   "miss-2": "Missed. They are running.",
   gone: "The target is gone.",
@@ -280,6 +284,9 @@ export class Game {
   /** the stage's loudness as its gauge shows it (eased, so the bar does not flicker) */
   private stage = 0;
   private outcome: { result: Result; in: number } | null = null;
+  /** the last of the places is done: going home (`ending.ts`), seconds into it, what has sounded, and the voice at the end of it */
+  private home: Ending | null = null;
+  private ending: { t: number; done: Set<string>; voice: Playing | null } | null = null;
   /** out of time (`Place.limit`): the arrest, seconds into it; and what the clock has already said on the way there */
   private bust: { t: number; done: Set<string> } | null = null;
   private warned = false;
@@ -363,7 +370,7 @@ export class Game {
 
   get snapshot(): Snapshot {
     const next = PLACES.length ? this.contract % PLACES.length : 0;
-    return { phase: this.phase, contract: this.contract, score: this.score, locked: this.locked, result: this.result, target: this.target ? this.told().join(", ") : "", place: this.place.name, next: (this.places[next] ?? this.make(next)).name, lost: this.result?.kind === "caught" && this.place.limit ? this.place.limit.card : this.place.lost.card };
+    return { phase: this.phase, contract: this.contract, score: this.score, locked: this.locked, result: this.result, target: this.target ? this.told().join(", ") : "", place: this.place.name, next: (this.places[next] ?? this.make(next)).name, lost: this.result?.kind === "caught" && this.place.limit ? this.place.limit.card : this.place.lost.card, home: this.contract > 0 && this.contract % PLACES.length === 0 };
   }
 
   private make(i: number): Place {
@@ -386,7 +393,8 @@ export class Game {
   /** Start, go on to the next contract, try again or resume. Call from the click itself: audio and the mouse need the gesture. */
   start(): void {
     this.sound.resume();
-    if (this.phase === "menu" || this.phase === "won") this.brief(this.contract + 1);
+    if (this.phase === "won" && this.contract % PLACES.length === 0) this.goHome();
+    else if (this.phase === "menu" || this.phase === "won") this.brief(this.contract + 1);
     else if (this.phase === "failed") this.brief(this.contract);
     this.setPhase("playing");
     this.last = performance.now();
@@ -601,7 +609,7 @@ export class Game {
       this.fingered = performance.now();
       if (this.phase !== "playing") return;
       // (during an opening, a touch anywhere gets on with it)
-      if (this.intro || this.bust) return this.fire();
+      if (this.intro || this.bust || this.ending) return this.fire();
       try {
         this.canvas.setPointerCapture(e.pointerId);
       } catch {
@@ -671,7 +679,7 @@ export class Game {
   }
   /** what those buttons show, read each frame */
   get gauges() {
-    return { air: this.breath.air, holding: this.breath.holding, spent: this.breath.spent, rounds: this.rounds, of: ROUNDS, bolt: this.bolt > 0, zoom: ZOOMS[this.zoom], busy: !!this.shot || !!this.intro || !!this.outcome || !!this.bust };
+    return { air: this.breath.air, holding: this.breath.holding, spent: this.breath.spent, rounds: this.rounds, of: ROUNDS, bolt: this.bolt > 0, zoom: ZOOMS[this.zoom], busy: !!this.shot || !!this.intro || !!this.outcome || !!this.bust || !!this.ending };
   }
 
   /** breathe in and hold: the crosshair settles, for as long as the air lasts */
@@ -702,6 +710,7 @@ export class Game {
     this.camera.updateProjectionMatrix();
     for (const b3 of [this.live, this.rifleLines]) b3.setResolution(this.w, this.h);
     for (const p of this.places) p?.setResolution(this.w, this.h);
+    this.home?.setResolution(this.w, this.h);
     this.cast.setResolution(this.w, this.h);
   }
 
@@ -742,6 +751,12 @@ export class Game {
       if ((document.hidden || !document.hasFocus()) && this.sound.ctx.state === "running") this.hush();
     }
     let world = dt;
+    if (this.ending) {
+      // going home: nothing else is happening
+      if (this.phase === "playing") this.ending.t += dt;
+      if (this.ending.t >= HOME) this.arrive();
+      return dt;
+    }
     if (this.intro) world = dt * this.opening(dt);
     else if (this.bust) this.arresting(dt);
     else if (this.shot) world = dt * this.flight(dt);
@@ -1000,6 +1015,74 @@ export class Game {
     this.cast.extra(0, neck, headQ, this.camera.position, dt, K);
   }
 
+  // ------------------------------------------------------------------ going home
+  /** The last of the places is done: before the round begins again, the way home is shown (`ending.ts`). */
+  private goHome(): void {
+    this.home ??= new Ending();
+    this.home.setResolution(this.w, this.h);
+    // (its city is seen only through its window, its room from the corridor only through its door)
+    this.gl.localClippingEnabled = true;
+    this.cast.clear();
+    this.fx.clear();
+    this.shot = null;
+    this.outcome = null;
+    this.bust = null;
+    this.queue = [];
+    this.subtitle.until = 0;
+    this.rifle.visible = false;
+    this.place.group.visible = false;
+    this.scene.add(this.home.group);
+    this.ending = { t: 0, done: new Set(), voice: null };
+  }
+
+  /** It is over: the next contract, at the first of the places. */
+  private arrive(): void {
+    const e = this.ending!;
+    if (e.voice) this.sound.stop(e.voice);
+    this.scene.remove(this.home!.group);
+    this.place.group.visible = true;
+    this.ending = null;
+    this.brief(this.contract + 1);
+  }
+
+  /** this frame of the way home: its lines, with the rifle, a head and the sounds lent to it */
+  private homeward(B: Beams, dt: number): void {
+    const e = this.ending!, snd = this.sound;
+    this.home!.draw(B, e.t, e.done, {
+      parts: this.rifleParts,
+      hit: (name, rate, level, delay = 0) => void snd.hit(name, rate, level, delay),
+      say: (id, from) => {
+        const clip = snd.clip(id);
+        if (!clip) return;
+        e.voice = snd.say(clip, from, 1, 1.4, 3);
+        this.subtitle = { text: (LINES[id] ?? clip.say).toUpperCase(), until: this.clock + (clip.end - clip.start) + 0.9 };
+      },
+      head: (pos, q) => this.cast.extra(0, pos, q, this.camera.position, dt, CREW_HEAD, e.voice),
+    });
+  }
+
+  /** over the way home: a film's black bars, the eyelids, the dark it comes out of and goes into, and what is said */
+  private hudHome(ctx: CanvasRenderingContext2D): void {
+    const { w, h } = this, e = this.ending!, bar = h * 0.1, { dark, lids } = this.home!.shade(e.t);
+    ctx.save();
+    ctx.globalCompositeOperation = "source-over";
+    ctx.fillStyle = "#000";
+    if (lids > 0) {
+      ctx.fillRect(0, 0, w, (h / 2) * lids);
+      ctx.fillRect(0, h - (h / 2) * lids, w, (h / 2) * lids);
+    }
+    if (dark > 0) {
+      ctx.globalAlpha = dark;
+      ctx.fillRect(0, 0, w, h);
+      ctx.globalAlpha = 1;
+    }
+    ctx.fillRect(0, 0, w, bar);
+    ctx.fillRect(0, h - bar, w, bar);
+    ctx.restore();
+    if (this.clock < this.subtitle.until) text(ctx, this.subtitle.text, w / 2, h - bar - 26, { size: 20, align: "center", alpha: Math.min(1, (this.subtitle.until - this.clock) / 0.4), max: w - 24 });
+    if (e.t > 1.5 && e.t < HOME - 2 && this.phase === "playing") text(ctx, this.touch ? "TAP TO SKIP" : "CLICK OR SPACE TO SKIP", w - 22, h - h * 0.05 + 5, { size: 12, color: V.blue, weight: 500, align: "right" });
+  }
+
   // ------------------------------------------------------------------ out of time
   /** The time at the scope is up (`Place.limit`): the view goes outside, to watch them come. */
   private caught(): void {
@@ -1155,6 +1238,11 @@ export class Game {
   /** Pull the trigger: the bullet goes where the crosshair is at this instant. (During an opening: get on with it.) */
   fire(): void {
     if (this.phase !== "playing" || this.shot || this.outcome || this.pending) return;
+    if (this.ending) {
+      // (once it is plain what this is: on to the next contract)
+      if (this.ending.t > 1.5) this.ending.t = HOME;
+      return;
+    }
     if (this.bust) {
       // (once it has been seen what is happening: get on with it)
       if (this.bust.t > 1.5) this.bust.t = Math.max(this.bust.t, BUST - 0.02);
@@ -1481,7 +1569,8 @@ export class Game {
   // ------------------------------------------------------------------ the view
   private placeCamera(): void {
     const cam = this.camera, sh = this.shot;
-    if (this.intro) this.introCamera();
+    if (this.ending) this.home!.camera(cam, this.ending.t);
+    else if (this.intro) this.introCamera();
     else if (this.bust) this.bustCamera();
     else if (!sh) {
       // through the scope: the aim, and on it the breath's drift, the pulse and the last shot's kick
@@ -1538,9 +1627,12 @@ export class Game {
     // (what the rifle is in fades as the view goes in at the scope)
     const outside = this.intro ? 1 - smooth((this.entering() - 0.45) / 0.3) : this.shot || this.bust ? 1 : 0;
     this.cast.hideExtras();
-    this.place.draw(B, outside);
-    if (this.intro) this.crew(B, outside, world);
-    else if (this.bust) this.arrest(B, world);
+    if (this.ending) this.homeward(B, world);
+    else {
+      this.place.draw(B, outside);
+      if (this.intro) this.crew(B, outside, world);
+      else if (this.bust) this.arrest(B, world);
+    }
     this.cast.draw(B, cam, world);
     this.fx.draw(B, cam);
     if (this.shot) this.drawBullet(B, this.shot);
@@ -1558,7 +1650,8 @@ export class Game {
     const t2 = performance.now();
     // what each throat is saying, at its mouth
     this.cast.drawWords(ctx, cam, this.w, this.h);
-    if (this.intro) this.hudIntro(ctx);
+    if (this.ending) this.hudHome(ctx);
+    else if (this.intro) this.hudIntro(ctx);
     else if (this.bust) this.hudBust(ctx);
     else if (this.shot) this.hudFlight(ctx, this.shot);
     else this.hudScope(ctx);

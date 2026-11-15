@@ -71,6 +71,11 @@ CLIPS = {
         ("doit", [("do", 4, .2), ("it", 0, .3)], TALK),
         ("sell", [("sell", 5, .22), ("it", 3, .14), ("all", 0, .45)], TALK),
     ],
+    # whoever has the rifle, at home at the end of it all, lying down (src/sniper/ending.ts): low, tired, falling away
+    "home": [
+        ("day", [("a-", 1, .11), ("noth-", 3, .2), ("er", 1, .15), ("day", 2, .55),
+                 ("a-", 0, .11), ("noth-", 2, .2), ("er", 0, .15), ("con-", 1, .26), ("tract", -4, .6)], dict(pressure=7, tension=.38, roughness=.1, breathiness=.18)),
+    ],
     "scream": [
         ("ah", [("ah", 19, .5), ("~", 21, .6)], SCREAM),
         ("no", [("no", 16, .25), ("~", 19, .5)], SCREAM),

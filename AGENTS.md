@@ -13,6 +13,7 @@ https://jwillc.github.io/chimera-one-breath/; a push to `main` rebuilds and rede
 - `src/sniper/place.ts`: what a place is (`Place`, `Scene`). `condo.ts`, `pool.ts`, `steps.ts`,
   `drive.ts`, `woods.ts`, `opera.ts`, `block.ts`: the seven, in the order of `PLACES` in `game.ts`.
   `looks.ts`: how a crowd of strangers is dressed, and what is said of one to tell them apart.
+  `ending.ts`: the way home, shown after the last of the places.
 - `src/sniper/sound.ts`, `fx.ts`, `words.ts`: playing the voices, blood and glass, how a cry is spelled.
 - `src/sniper/SniperPage.tsx` and `sniper.css`: the card over the canvas.
 - `public/shows/sniper/`: every sound, rendered ahead. `sounds/compose.py`: the script that renders
@@ -80,6 +81,17 @@ https://jwillc.github.io/chimera-one-breath/; a push to `main` rebuilds and rede
   `sounds/compose.py`; then the card, result kind `caught`. The clock stops while a bullet flies.
 - **Not in front, not heard.** A contract under way pauses when the window loses focus; behind a
   card the sound is suspended instead (`Game.hush`), and comes back with the focus.
+- **After the last place, the way home.** Winning the last of `PLACES` (whichever that is: it is
+  meant to stay the ending as places are added) and pressing on plays `ending.ts` before the next
+  contract: `Game.goHome`, `homeward`, `hudHome`, `arrive`. It is thirty seconds (`HOME`) on its own
+  clock, skipped by a click: first person down a corridor and in at a door, the rifle taken down
+  into its case on the table (the same lines by part as the opening's assembly), the bed, the eyes
+  shutting, then from across the room the whole figure saying "Another day, another contract"
+  (`male-home-day`, a `home` take in `sounds/compose.py`: sung notes, not `render text`, because only
+  those write the `.tele` that moves a mouth; `Cast.extra` takes the voice). Wire hides nothing, so
+  its fixed lines are in three lots: the corridor, the room (clipped to the doorway while the eyes
+  are outside it) and the city (clipped to the window, always), by `Beams.clip`.
+  `tests/sniper-ending.test.ts` keeps the eyes out of the walls.
 - **The people are adults.**
 - A place may have an `opening` (the drive, the opera and the block do): the view goes round whoever has the
   rifle, with a line of what is different here, then in at the scope. Seen once per contract,
