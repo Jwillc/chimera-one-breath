@@ -33,6 +33,10 @@ https://jwillc.github.io/chimera-one-breath/; a push to `main` rebuilds and rede
 - **The game's own lettering is Archivo**, drawn by `text()` in `game.ts`: names of things in blue,
   values in white, the target in amber, nothing in the dim blues. The words at people's mouths and
   the "Chimera" wordmark stay in Hershey.
+- **It plays on a phone**, upright or on its side. A finger on the view aims and never fires; the
+  buttons (`Pad` in `SniperPage.tsx`) sit in the bottom corners, outside the scope's circle, and
+  carry the breath and the rounds, which the canvas then does not draw. Canvas text that could be
+  wider than a phone takes `max` in `text()`. Anything added to the screen has to fit 375 px wide.
 - **The people are adults.**
 - A place may have an `opening` (only the drive does): seen once per contract, skipped by a click,
   not replayed on "Try again".
@@ -44,6 +48,7 @@ https://jwillc.github.io/chimera-one-breath/; a push to `main` rebuilds and rede
 | anything | `bun run build` (wasm, typecheck, bundle) and `bun run test` |
 | `things.ts` | read what `tests/sniper-things.test.ts` pins before moving a number |
 | the game, a place, the card | `bun run dev`, then drive it in a browser (below) and look at screenshots |
+| the card, the gauges, the buttons, CSS | the same at 375x812 and 812x375 with touch on (a `touchstart` on `window` turns it on) |
 
 In the browser the game is `window.__sniper`. Set `frozen = true` and step with `frame(1/60)`;
 `g["brief"](n)` then `g["setPhase"]("playing")` jumps to contract n; `debugAim("target" | index,

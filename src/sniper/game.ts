@@ -21,7 +21,9 @@
  * out of its window, says what is different here, and goes in at the scope.
  *
  * Controls: the mouse (or the arrow keys) aims, the wheel (or Z and X) zooms, shift holds your
- * breath, click or space fires, Esc or P pauses.
+ * breath, click or space fires, Esc or P pauses. On a touch screen a finger dragged over the view
+ * aims (the crosshair goes as far over the picture as the finger does, and a little more), two
+ * fingers drawn apart or together zoom, and the page's buttons do the rest (`SniperPage.tsx`).
  */
 import * as THREE from "three";
 import { Beams } from "../ui/render/beams3d.ts";
@@ -67,6 +69,8 @@ const ZOOMS = [4, 8, 16, 32];
 const ROUNDS = 3;
 /** a contract's opening: how slowly the room's time runs while the view goes round, how long before the round ends the view starts in at the scope, and how long that takes (s) */
 const SLOW = 0.2, LEAD = 0.5, ENTER = 1.6;
+/** a finger on the view: how far the crosshair goes over the picture for the finger's own travel, and how much two fingers must spread or close for a step of zoom */
+const FINGER = 1.25, PINCH = 1.22;
 /** the bullet's journey as the camera tells it: where it starts (the muzzle, m along its line), when it
  *  has cleared the rifle, when it reaches the last metres, how long those are and how fast it crawls them */
 const S0 = 1, T1 = 0.9, T2 = 2.1, LAST = 7, CRAWL = 4.5, T3 = T2 + LAST / CRAWL;
@@ -133,18 +137,30 @@ interface TextOpts {
   weight?: number;
   /** letter spacing, in ems */
   ls?: number;
+  /** no wider than this: set smaller if it would be (a phone held upright is narrow) */
+  max?: number;
 }
 /**
  * Words on the gauges: solid, with a dark edge under them so that a line of the picture behind does
  * not run into the letters. Returns how wide they came out.
  */
 function text(ctx: CanvasRenderingContext2D, s: string, x: number, y: number, o: TextOpts = {}): number {
-  const size = o.size ?? 12, ls = (o.ls ?? 0.07) * size, align = o.align ?? "left";
+  let size = o.size ?? 12, ls = (o.ls ?? 0.07) * size;
+  const align = o.align ?? "left";
   ctx.save();
   ctx.globalCompositeOperation = "source-over";
   ctx.globalAlpha = o.alpha ?? 1;
-  ctx.font = `${o.weight ?? 600} semi-condensed ${size}px ${FACE}`;
-  if ("letterSpacing" in ctx) (ctx as CanvasRenderingContext2D & { letterSpacing: string }).letterSpacing = `${ls.toFixed(2)}px`;
+  const set = () => {
+    ctx.font = `${o.weight ?? 600} semi-condensed ${size.toFixed(1)}px ${FACE}`;
+    if ("letterSpacing" in ctx) (ctx as CanvasRenderingContext2D & { letterSpacing: string }).letterSpacing = `${ls.toFixed(2)}px`;
+  };
+  set();
+  const wide = o.max ? ctx.measureText(s).width - ls : 0;
+  if (o.max && wide > o.max) {
+    ls *= o.max / wide;
+    size *= o.max / wide;
+    set();
+  }
   ctx.textAlign = align;
   ctx.textBaseline = "alphabetic";
   // (the spacing after the last letter is not part of the word)
@@ -212,6 +228,10 @@ export class Game {
 
   private phase: Phase = "menu";
   private locked = false;
+  /** played with fingers (the page says): its buttons carry the breath and the rounds, and nothing takes the mouse */
+  touch = false;
+  /** when a finger was last on the view: the mouse events a browser makes up after a touch are not the mouse */
+  private fingered = -1e9;
   private contract = 0;
   private score = 0;
   private result: Result | null = null;
@@ -327,7 +347,7 @@ export class Game {
     else if (this.phase === "failed") this.brief(this.contract);
     this.setPhase("playing");
     this.last = performance.now();
-    this.capture();
+    if (!this.touch) this.capture();
   }
 
   pause(): void {
@@ -420,17 +440,67 @@ export class Game {
       if (was && !this.locked && this.phase === "playing") this.pause();
       else this.onChange(this.snapshot);
     });
+    const mouse = () => performance.now() - this.fingered > 800;
     on(this.canvas, "mousemove", (e) => {
       // captured or not: where a page may not take the mouse, moving it over the view still aims
-      if (this.phase !== "playing" || this.shot || this.intro) return;
+      if (this.phase !== "playing" || this.shot || this.intro || !mouse()) return;
       const k = 0.0024 * (this.fov / 40);
       this.turn(-e.movementX * k, -e.movementY * k);
     });
     on(this.canvas, "mousedown", (e) => {
-      if (this.phase !== "playing" || e.button !== 0) return;
+      if (this.phase !== "playing" || e.button !== 0 || !mouse()) return;
       if (!this.locked) this.capture();
       this.fire();
     });
+    // fingers: one dragged over the view turns the scope, two drawn apart or together change the zoom
+    // (a touch on the view never fires: that is the page's button, so that aiming cannot loose a round)
+    const fingers = new Map<number, { x: number; y: number }>();
+    let spread = 0;
+    on(this.canvas, "pointerdown", (e) => {
+      if (e.pointerType !== "touch") return;
+      e.preventDefault();
+      this.fingered = performance.now();
+      if (this.phase !== "playing") return;
+      // (during an opening, a touch anywhere gets on with it)
+      if (this.intro) return this.fire();
+      try {
+        this.canvas.setPointerCapture(e.pointerId);
+      } catch {
+        // some pointers cannot be captured
+      }
+      fingers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      spread = 0;
+    });
+    on(this.canvas, "pointermove", (e) => {
+      const f = fingers.get(e.pointerId);
+      if (!f) return;
+      this.fingered = performance.now();
+      const dx = e.clientX - f.x, dy = e.clientY - f.y;
+      f.x = e.clientX;
+      f.y = e.clientY;
+      if (this.phase !== "playing" || this.shot || this.intro) return;
+      if (fingers.size === 1) {
+        // the picture is `fov` high: this many radians to a pixel of it
+        const k = (FINGER * this.fov * Math.PI) / 180 / this.h;
+        this.turn(-dx * k, -dy * k);
+      } else if (fingers.size === 2) {
+        const [a, b] = [...fingers.values()], d = Math.hypot(a.x - b.x, a.y - b.y);
+        if (!spread) spread = d;
+        else if (d > spread * PINCH || d < spread / PINCH) {
+          this.zoomBy(d > spread ? 1 : -1);
+          spread = d;
+        }
+      }
+    });
+    const lift = (e: PointerEvent) => {
+      if (fingers.delete(e.pointerId)) this.fingered = performance.now();
+      spread = 0;
+    };
+    on(this.canvas, "pointerup", lift);
+    on(this.canvas, "pointercancel", lift);
+    // (a browser that would rather scroll, zoom or make up a mouse from a touch on the view is told not to:
+    // if it took the gesture, the finger's moves would stop coming)
+    for (const type of ["touchstart", "touchmove"] as const) on(this.canvas, type, (e) => e.cancelable && e.preventDefault(), { passive: false });
     on(this.canvas, "wheel", (e) => {
       e.preventDefault();
       if (this.phase === "playing" && e.deltaY !== 0) this.zoomBy(e.deltaY < 0 ? 1 : -1);
@@ -450,6 +520,19 @@ export class Game {
     if (z === this.zoom || this.shot || this.intro) return;
     this.zoom = z;
     this.sound.hit("t", 1.7, 0.18);
+  }
+
+  /** the page's buttons (a touch screen): a step of zoom in or out; a breath taken and held, or let go */
+  zoomStep(step: 1 | -1): void {
+    if (this.phase === "playing") this.zoomBy(step);
+  }
+  breathe(hold: boolean): void {
+    if (hold) this.hold();
+    else this.letGo();
+  }
+  /** what those buttons show, read each frame */
+  get gauges() {
+    return { air: this.breath.air, holding: this.breath.holding, spent: this.breath.spent, rounds: this.rounds, of: ROUNDS, bolt: this.bolt > 0, zoom: ZOOMS[this.zoom], busy: !!this.shot || !!this.intro || !!this.outcome };
   }
 
   /** breathe in and hold: the crosshair settles, for as long as the air lasts */
@@ -1124,19 +1207,19 @@ export class Game {
     seg(ctx, 0, h - bar, w, h - bar, V.blueDim, 1, { alpha: 0.7 * (1 - u) });
     /** there from one time to another, coming and going over a moment */
     const shown = (from: number, to: number) => smooth((t - from) / 0.4) * (1 - smooth((t - to) / 0.5));
-    const y = h - h * 0.1 - Math.max(64, h * 0.13), turn = 3.1, last = op.orbit - LEAD - 0.3;
+    const y = h - h * 0.1 - Math.max(64, h * 0.13), turn = 3.1, last = op.orbit - LEAD - 0.3, max = w - 24;
     const a1 = shown(0.3, turn - 0.5), a2 = shown(turn, last), a3 = smooth(u / 0.25) * (1 - smooth((u - 0.75) / 0.25));
     if (a1 > 0) {
-      text(ctx, `CONTRACT ${this.contract}`, cx, y, { size: 40, color: V.amber, align: "center", weight: 800, ls: 0.16, alpha: a1 });
+      text(ctx, `CONTRACT ${this.contract}`, cx, y, { size: 40, color: V.amber, align: "center", weight: 800, ls: 0.16, alpha: a1, max });
       text(ctx, this.place.name, cx, y + 30, { size: 18, align: "center", ls: 0.3, alpha: a1 });
     }
     if (a2 > 0) {
-      text(ctx, op.rule, cx, y - 6, { size: 32, align: "center", weight: 800, ls: 0.12, alpha: a2 });
-      op.more.forEach((line, i) => text(ctx, line, cx, y + 22 + i * 21, { size: 15, color: V.blue, align: "center", alpha: a2 }));
+      text(ctx, op.rule, cx, y - 6, { size: 32, align: "center", weight: 800, ls: 0.12, alpha: a2, max });
+      op.more.forEach((line, i) => text(ctx, line, cx, y + 22 + i * 21, { size: 15, color: V.blue, align: "center", alpha: a2, max }));
     }
-    if (a3 > 0 && this.target) text(ctx, `TARGET: ${TRAIT_TEXT[this.target.trait]}`, cx, y, { size: 26, color: V.amber, align: "center", weight: 800, ls: 0.12, alpha: a3 });
-    if (this.clock < this.subtitle.until) text(ctx, this.subtitle.text, cx, h * 0.1 + 34, { size: 18, align: "center", alpha: Math.min(1, (this.subtitle.until - this.clock) / 0.4) });
-    if (u <= 0) text(ctx, "CLICK OR SPACE TO SKIP", w - 22, h - h * 0.05 + 5, { size: 12, color: V.blue, weight: 500, align: "right" });
+    if (a3 > 0 && this.target) text(ctx, `TARGET: ${TRAIT_TEXT[this.target.trait]}`, cx, y, { size: 26, color: V.amber, align: "center", weight: 800, ls: 0.12, alpha: a3, max });
+    if (this.clock < this.subtitle.until) text(ctx, this.subtitle.text, cx, h * 0.1 + 34, { size: 18, align: "center", alpha: Math.min(1, (this.subtitle.until - this.clock) / 0.4), max });
+    if (u <= 0) text(ctx, this.touch ? "TAP TO SKIP" : "CLICK OR SPACE TO SKIP", w - 22, h - h * 0.05 + 5, { size: 12, color: V.blue, weight: 500, align: "right" });
   }
 
   private hudScope(ctx: CanvasRenderingContext2D): void {
@@ -1157,16 +1240,17 @@ export class Game {
     text(ctx, this.range > 0 ? `${this.range.toFixed(0)} M` : "--- M", w - 22, 68, { size: 16, align: "right" });
     text(ctx, `${Math.floor(this.watch / 60)}:${String(Math.floor(this.watch % 60)).padStart(2, "0")}`, w - 22, 90, { size: 16, color: V.blue, align: "right" });
 
-    const b = this.breath, bx = 22, by = h - 30, bw = Math.min(170, w * 0.22);
+    // (on a touch screen the page's buttons are here, and they carry the breath and the rounds)
+    const b = this.breath, bx = 22, by = h - 30, bw = Math.min(170, w * 0.22), keys = !this.touch;
     const bc = b.spent ? BLOOD : b.holding ? V.green : V.blue;
-    text(ctx, b.spent ? "OUT OF BREATH" : b.holding ? "HOLDING" : "BREATH", bx, by - 18, { size: 13, color: bc, ls: 0.16 });
-    seg(ctx, bx, by - 8, bx + bw, by - 8, V.frame, 3);
-    if (b.air > 0.01) seg(ctx, bx, by - 8, bx + bw * b.air, by - 8, bc, 3);
-    text(ctx, "SHIFT HOLDS IT", bx, by + 12, { size: 12, color: V.blue, weight: 500, alpha: 0.85 });
+    if (keys) text(ctx, b.spent ? "OUT OF BREATH" : b.holding ? "HOLDING" : "BREATH", bx, by - 18, { size: 13, color: bc, ls: 0.16 });
+    if (keys) seg(ctx, bx, by - 8, bx + bw, by - 8, V.frame, 3);
+    if (keys && b.air > 0.01) seg(ctx, bx, by - 8, bx + bw * b.air, by - 8, bc, 3);
+    if (keys) text(ctx, "SHIFT HOLDS IT", bx, by + 12, { size: 12, color: V.blue, weight: 500, alpha: 0.85 });
 
     const ax = w - 22, ay = h - 30;
-    text(ctx, this.bolt > 0 ? "BOLT" : "ROUNDS", ax, ay - 34, { size: 13, color: this.bolt > 0 ? V.amber : V.blue, align: "right", ls: 0.16 });
-    for (let i = 0; i < ROUNDS; i++) {
+    if (keys) text(ctx, this.bolt > 0 ? "BOLT" : "ROUNDS", ax, ay - 34, { size: 13, color: this.bolt > 0 ? V.amber : V.blue, align: "right", ls: 0.16 });
+    for (let i = 0; keys && i < ROUNDS; i++) {
       // a cartridge: case and bullet
       const x = ax - 8 - i * 16, live = i < this.rounds, color = live ? V.amber : V.frame;
       seg(ctx, x - 4, ay + 4, x - 4, ay - 12, color, 1.5);
@@ -1178,11 +1262,11 @@ export class Game {
 
     if (this.banner.age < 3.2) {
       const a = Math.min(1, this.banner.age / 0.3) * Math.min(1, (3.2 - this.banner.age) / 0.8);
-      text(ctx, this.banner.text, cx, cy - R * 0.56, { size: 38, color: this.banner.color, align: "center", alpha: a, weight: 800, ls: 0.16 });
-      if (this.banner.sub) text(ctx, this.banner.sub, cx, cy - R * 0.56 + 30, { size: 16, align: "center", alpha: a, ls: 0.1 });
+      text(ctx, this.banner.text, cx, cy - R * 0.56, { size: 38, color: this.banner.color, align: "center", alpha: a, weight: 800, ls: 0.16, max: 1.6 * R });
+      if (this.banner.sub) text(ctx, this.banner.sub, cx, cy - R * 0.56 + 30, { size: 16, align: "center", alpha: a, ls: 0.1, max: 1.7 * R });
     }
-    if (this.clock < this.subtitle.until) text(ctx, this.subtitle.text, cx, cy + R * 0.66, { size: 18, align: "center", alpha: Math.min(1, (this.subtitle.until - this.clock) / 0.4) });
-    if (playing && !this.locked) text(ctx, "CLICK FIRES AND TAKES THE MOUSE - THE ARROW KEYS AIM TOO", cx, cy + R * 0.9, { size: 12, color: V.blue, weight: 500, align: "center" });
+    if (this.clock < this.subtitle.until) text(ctx, this.subtitle.text, cx, cy + R * 0.66, { size: 18, align: "center", alpha: Math.min(1, (this.subtitle.until - this.clock) / 0.4), max: 1.45 * R });
+    if (playing && !this.locked && keys) text(ctx, "CLICK FIRES AND TAKES THE MOUSE - THE ARROW KEYS AIM TOO", cx, cy + R * 0.9, { size: 12, color: V.blue, weight: 500, align: "center" });
     if (this.showStats) text(ctx, `${this.stats.ms.toFixed(1)} MS  ${this.stats.fps.toFixed(0)} FPS`, cx, 20, { size: 12, color: V.blue, weight: 500, align: "center" });
 
     // what the crosshair is on, for the range line (cheap: once a frame)
@@ -1223,7 +1307,7 @@ export class Game {
       ring(ctx, px, py, 5, color, 1.4, { alpha: a });
       seg(ctx, px + 4, py - 4, lx - 28, ly - 5, color, 1, { alpha: 0.6 * a });
       seg(ctx, lx - 28, ly - 5, lx - 8, ly - 5, color, 1, { alpha: 0.6 * a });
-      text(ctx, e.kind === "exit" ? "EXIT WOUND" : e.kind === "entry" ? "ENTRY WOUND" : e.text, lx, ly, { size: 17, color, weight: 700, alpha: a, ls: 0.1 });
+      text(ctx, e.kind === "exit" ? "EXIT WOUND" : e.kind === "entry" ? "ENTRY WOUND" : e.text, lx, ly, { size: 17, color, weight: 700, alpha: a, ls: 0.1, max: w - lx - 10 });
     });
   }
 

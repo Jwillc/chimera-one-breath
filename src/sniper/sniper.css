@@ -66,3 +66,187 @@
   color: var(--amber);
   box-shadow: none;
 }
+
+/* a narrow or a short screen (a phone, either way up): the card keeps inside it */
+.fps-card.sniper-card {
+  max-height: calc(100dvh - 16px);
+  overflow-y: auto;
+}
+.sniper-card h1 {
+  font-size: min(40px, 7vw);
+}
+@media (max-width: 520px), (max-height: 520px) {
+  .fps-card.sniper-card {
+    gap: 11px;
+    padding: 18px 18px 16px;
+  }
+  .sniper-card p {
+    font-size: 15px;
+    line-height: 1.4;
+  }
+  .sniper-card .hint {
+    font-size: 13.5px;
+  }
+  .sniper-card button.primary.large {
+    padding: 11px 28px;
+  }
+}
+@media (max-height: 520px) {
+  .fps-card.sniper-card {
+    width: min(680px, calc(100vw - 32px));
+  }
+  .sniper-card h1 {
+    font-size: min(30px, 7vw);
+  }
+}
+
+/* ---------- a touch screen: the game is not a page to scroll, pinch or pull, and its buttons sit
+   in the bottom corners, outside the scope's circle whichever way up the phone is held */
+.fps,
+.fps > canvas {
+  touch-action: none;
+}
+.fps {
+  overscroll-behavior: none;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+.sniper-pad {
+  z-index: 1;
+  align-self: end;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  padding: 10px 14px 16px;
+  pointer-events: none;
+  font-family: "Archivo", system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-stretch: 87.5%;
+  transition: opacity 0.2s;
+}
+/* (while the bullet is in the air, or a contract is opening, there is nothing for them to do: they
+   are out of the picture, and a touch where they were goes to the view) */
+.sniper-pad[data-busy="true"] {
+  opacity: 0;
+}
+.sniper-pad[data-busy="true"] button {
+  pointer-events: none;
+}
+.sniper-pad-side {
+  display: grid;
+  gap: 12px;
+  justify-items: start;
+}
+.sniper-pad-side.right {
+  justify-items: end;
+}
+.sniper-pad-zoom {
+  display: flex;
+  gap: 10px;
+}
+.sniper-pad button {
+  pointer-events: auto;
+  touch-action: none;
+  appearance: none;
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: 7px;
+  padding: 0;
+  border: 1.5px solid var(--blue);
+  border-radius: 0;
+  background: rgba(0, 0, 0, 0.6);
+  color: var(--white);
+  font: inherit;
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  -webkit-tap-highlight-color: transparent;
+}
+.sniper-pad button:active {
+  background: rgba(79, 182, 242, 0.3);
+}
+.sniper-pad .sniper-pad-small {
+  width: 48px;
+  height: 48px;
+  font-size: 15px;
+  letter-spacing: 0.1em;
+  border-color: var(--blue-mid);
+}
+.sniper-pad-zoom button {
+  width: 56px;
+  height: 56px;
+  font-size: 30px;
+  font-weight: 500;
+  letter-spacing: 0;
+}
+.sniper-pad .sniper-pad-breath {
+  width: 112px;
+  height: 100px;
+}
+.sniper-pad-air {
+  width: 76px;
+  height: 6px;
+  background: var(--frame);
+}
+.sniper-pad-air > span {
+  display: block;
+  height: 100%;
+  background: var(--blue);
+}
+.sniper-pad-note {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  color: var(--blue);
+}
+.sniper-pad[data-breath="holding"] .sniper-pad-breath {
+  border-color: var(--green);
+  background: rgba(91, 227, 129, 0.16);
+}
+.sniper-pad[data-breath="holding"] .sniper-pad-air > span {
+  background: var(--green);
+}
+.sniper-pad[data-breath="holding"] .sniper-pad-note {
+  color: var(--green);
+}
+.sniper-pad[data-breath="spent"] .sniper-pad-breath {
+  border-color: var(--red);
+}
+.sniper-pad[data-breath="spent"] .sniper-pad-air > span {
+  background: var(--red);
+}
+.sniper-pad[data-breath="spent"] .sniper-pad-note {
+  color: var(--red);
+}
+.sniper-pad .sniper-pad-fire {
+  width: 104px;
+  height: 104px;
+  border: 2px solid var(--amber);
+  border-radius: 50%;
+  color: var(--amber);
+  font-size: 19px;
+  font-weight: 800;
+  box-shadow: 0 0 14px rgba(255, 179, 64, 0.35);
+}
+.sniper-pad .sniper-pad-fire:active {
+  background: var(--amber);
+  color: #0a0a0a;
+}
+/* the rounds left, on the trigger */
+.sniper-pad-rounds {
+  display: flex;
+  gap: 5px;
+}
+.sniper-pad-rounds i {
+  width: 6px;
+  height: 14px;
+  background: var(--frame);
+}
+.sniper-pad[data-rounds="3"] .sniper-pad-rounds i,
+.sniper-pad[data-rounds="2"] .sniper-pad-rounds i:nth-child(-n + 2),
+.sniper-pad[data-rounds="1"] .sniper-pad-rounds i:nth-child(1) {
+  background: var(--amber);
+}

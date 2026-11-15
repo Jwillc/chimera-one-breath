@@ -13,17 +13,21 @@ hat, a glass, a phone) falls after them.
 Every sound in it is a synthesized voice: the people's talk and screams, the handler, the rifle
 (a beatboxer's kick, snare and tongue click), the bullet, your own breath.
 
-It is a desktop game: it needs a mouse and a keyboard.
+It plays with a mouse and keyboard, or on a phone or tablet with fingers, upright or on its side.
 
 ## Controls
 
-| Keys | What they do |
-|---|---|
-| Mouse (or the arrow keys) | Aim |
-| Wheel (or `Z` and `X`) | Zoom: 4x, 8x, 16x, 32x |
-| `Shift` | Hold your breath: the crosshair settles, for as long as the air lasts |
-| Click (or `Space`) | Fire. During a contract's opening: skip it |
-| `Esc` (or `P`) | Pause |
+| Mouse and keys | On a touch screen | What it does |
+|---|---|---|
+| Mouse (or the arrow keys) | Drag a finger over the view | Aim |
+| Wheel (or `Z` and `X`) | Pinch, or the `+` and `−` buttons | Zoom: 4x, 8x, 16x, 32x |
+| `Shift` | Hold the `BREATH` button | Hold your breath: the crosshair settles, for as long as the air lasts |
+| Click (or `Space`) | The `FIRE` button | Fire |
+| Click (or `Space`) | Tap anywhere | During a contract's opening: skip it |
+| `Esc` (or `P`) | The `II` button | Pause |
+
+On a touch screen the crosshair goes as far across the picture as the finger does (and a quarter
+more), at any zoom, and a touch on the view never fires: only the button does.
 
 ## The contracts
 
