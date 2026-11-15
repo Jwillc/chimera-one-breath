@@ -40,7 +40,7 @@ Five places, one after another, then round again with more people in each.
 4. **The drive.** A café on the far bank of a river, from the back seat of a car that does not stop.
 5. **The woods.** Three men at a camp, from a ridge. A tree trunk stops a bullet.
 
-If the people are outside the scope's circle, small marks on its rim point toward them (toward all
+If the people are outside the scope's circle, small red marks on its rim point toward them (toward all
 of them alike: which one is yours is for you to find).
 
 A shot that lands near them and they run for the way out. Hit somebody else and the contract is

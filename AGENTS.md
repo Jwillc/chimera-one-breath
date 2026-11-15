@@ -37,7 +37,7 @@ https://jwillc.github.io/chimera-one-breath/; a push to `main` rebuilds and rede
   buttons (`Pad` in `SniperPage.tsx`) sit in the bottom corners, outside the scope's circle, and
   carry the breath and the rounds, which the canvas then does not draw. Canvas text that could be
   wider than a phone takes `max` in `text()`. Anything added to the screen has to fit 375 px wide.
-- **The rim's marks say where, not who.** A small mark inside the scope's rim points at each person
+- **The rim's marks say where, not who.** A small red mark inside the scope's rim points at each person
   outside its circle (`whereabouts` in `game.ts`), all alike. Nothing on the screen singles out the
   target: finding which one it is, is the game.
 - **The people are adults.**

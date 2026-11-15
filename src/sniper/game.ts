@@ -1237,11 +1237,12 @@ export class Game {
       if (v.z > -0.5) continue;
       const sx = (v.x / -v.z) * f, sy = (-v.y / -v.z) * f, r = Math.hypot(sx, sy);
       // (it comes up as they near the rim from inside, so it is never the thing that gives them away in the glass)
-      const a = 0.7 * smooth((r - 0.8 * R) / (0.25 * R));
+      const a = 0.9 * smooth((r - 0.8 * R) / (0.25 * R));
       if (a <= 0.01) continue;
+      // (red: nothing else on the rim is, so it is seen at once)
       const ux = sx / r, uy = sy / r, tx = cx + ux * (R - 9), ty = cy + uy * (R - 9), bx = tx - ux * 9, by = ty - uy * 9;
-      seg(ctx, tx, ty, bx - uy * 5.5, by + ux * 5.5, V.white, 1.6, { alpha: a });
-      seg(ctx, tx, ty, bx + uy * 5.5, by - ux * 5.5, V.white, 1.6, { alpha: a });
+      seg(ctx, tx, ty, bx - uy * 5.5, by + ux * 5.5, V.red, 2, { alpha: a });
+      seg(ctx, tx, ty, bx + uy * 5.5, by - ux * 5.5, V.red, 2, { alpha: a });
     }
   }
 
