@@ -31,7 +31,7 @@ more), at any zoom, and a touch on the view never fires: only the button does.
 
 ## The contracts
 
-Six places, one after another, then round again with more people in each.
+Seven places, one after another, then round again with more people in each.
 
 1. **The condo.** A lit room in a tower, from the roof opposite.
 2. **The pool.** A hotel's roof deck, from a taller roof.
@@ -47,8 +47,16 @@ Six places, one after another, then round again with more people in each.
    goes on watching, and the shot is worth more. Fire at any other moment and the whole house is
    on its feet, shouting, and rushing up the aisles for the doors. It opens on one of the audience
    in the gallery, who takes a rifle out of a case at his feet and puts it together.
+7. **The block.** A square in the city, from a roof across the road. Twenty strangers in it (fourteen
+   on a phone), no two alike: each has their own hair (or none, or a hat over it), clothes of one
+   colour, and perhaps glasses, a tie, a drink, a phone, a cigar or a bag. The handler tells you
+   the target by the fewest of those things that nobody else there shares ("red hair, dressed in
+   blue"), so the others are nearly right. From up there their talk comes faint, one voice at a
+   time. There are forty seconds (counted down at the foot of the scope): after it the police are up the
+   stairs, and the view goes out to the roof to watch the arrest. It opens on the roof: someone comes to its edge at a crouch, puts the rifle together on one
+   knee below the wall, and leans it over.
 
-Add `?contract=6` to the address to begin at a given contract.
+Add `?contract=7` to the address to begin at a given contract.
 
 If the people are outside the scope's circle, small red marks on its rim point toward them (toward all
 of them alike: which one is yours is for you to find).
@@ -63,7 +71,8 @@ lost.
 - `src/sniper/people.ts` is the people: wire bodies in clothes under a simulated head, with a
   skeleton, heart, lungs and brain that show only while a bullet goes through.
 - `src/sniper/place.ts` is what a place is; `condo.ts`, `pool.ts`, `steps.ts`, `drive.ts`,
-  `woods.ts` and `opera.ts` are the six.
+  `woods.ts`, `opera.ts` and `block.ts` are the seven. `looks.ts` is how a crowd of strangers is
+  dressed and how one of them is told from the rest.
 - `src/sniper/things.ts` is the hat, glasses, cigar, glass and phone as small rigid bodies. Where
   one ends up is not scripted: it is let go with the speed of the place it sat and the push of the
   bullet that went by, and falls, tumbles, bounces, breaks, floats or sinks from there.

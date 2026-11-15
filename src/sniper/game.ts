@@ -40,8 +40,9 @@ import { Steps } from "./steps.ts";
 import { Drive } from "./drive.ts";
 import { Woods } from "./woods.ts";
 import { Opera } from "./opera.ts";
+import { Block } from "./block.ts";
 import { Cast, TRAIT_TEXT, type Hit, type Passage, type Person } from "./people.ts";
-import { CREW_HEAD, drawSeated } from "./crew.ts";
+import { CREW_HEAD, drawSeated, type Sitter } from "./crew.ts";
 
 /**
  * Safari, and the other browsers built on its engine alone (as every browser on an iPhone is). Its
@@ -51,7 +52,7 @@ export const SAFARI = typeof navigator !== "undefined" && /AppleWebKit/.test(nav
 
 export type Phase = "menu" | "playing" | "paused" | "won" | "failed";
 export interface Result {
-  kind: "down" | "wrong" | "gone" | "empty";
+  kind: "down" | "wrong" | "gone" | "empty" | "caught";
   head: boolean;
   /** nobody heard it (fired under the singing) */
   unheard: boolean;
@@ -74,12 +75,14 @@ export interface Snapshot {
 }
 
 /** the places, in the order the contracts come to them */
-const PLACES: (() => Place)[] = [() => new Condo(), () => new Pool(), () => new Steps(), () => new Drive(), () => new Woods(), () => new Opera()];
+const PLACES: (() => Place)[] = [() => new Condo(), () => new Pool(), () => new Steps(), () => new Drive(), () => new Woods(), () => new Opera(), () => new Block()];
 
 const ZOOMS = [4, 8, 16, 32];
 const ROUNDS = 3;
 /** a contract's opening: how slowly the room's time runs while the view goes round, how long before the round ends the view starts in at the scope, and how long that takes (s) */
 const SLOW = 0.2, LEAD = 0.5, ENTER = 1.6;
+/** where there is only so long at the scope: how long the arrest that ends it is watched before the card (s) */
+const BUST = 7.8;
 /**
  * The rifle put together in an opening: when the hands go down to the case, each part's time (s into
  * the opening), where it comes in from and where the hand that fits it is (both in the rifle's own
@@ -277,6 +280,10 @@ export class Game {
   /** the stage's loudness as its gauge shows it (eased, so the bar does not flicker) */
   private stage = 0;
   private outcome: { result: Result; in: number } | null = null;
+  /** out of time (`Place.limit`): the arrest, seconds into it; and what the clock has already said on the way there */
+  private bust: { t: number; done: Set<string> } | null = null;
+  private warned = false;
+  private ticked = 0;
   private queue: { at: number; id: string }[] = [];
   private subtitle = { text: "", until: 0 };
   private banner = { text: "", sub: "", color: V.amber, age: 99 };
@@ -356,7 +363,7 @@ export class Game {
 
   get snapshot(): Snapshot {
     const next = PLACES.length ? this.contract % PLACES.length : 0;
-    return { phase: this.phase, contract: this.contract, score: this.score, locked: this.locked, result: this.result, target: this.target ? TRAIT_TEXT[this.target.trait] : "", place: this.place.name, next: (this.places[next] ?? this.make(next)).name, lost: this.place.lost.card };
+    return { phase: this.phase, contract: this.contract, score: this.score, locked: this.locked, result: this.result, target: this.target ? this.told().join(", ") : "", place: this.place.name, next: (this.places[next] ?? this.make(next)).name, lost: this.result?.kind === "caught" && this.place.limit ? this.place.limit.card : this.place.lost.card };
   }
 
   private make(i: number): Place {
@@ -386,6 +393,11 @@ export class Game {
     if (!this.touch) this.capture();
   }
 
+  /** how the handler described the target: one thing, or (a stranger in a crowd) each thing said of how they look */
+  private told(): string[] {
+    return this.cast.wanted?.lines ?? (this.target ? [TRAIT_TEXT[this.target.trait]] : []);
+  }
+
   /** From the menu: begin at the n-th contract (for trying a place without playing up to it). */
   skipTo(n: number): void {
     if (this.phase === "menu" && n >= 1) this.contract = Math.floor(n) - 1;
@@ -399,6 +411,17 @@ export class Game {
     if (document.pointerLockElement === this.canvas) document.exitPointerLock();
     this.setPhase("paused");
   }
+
+  /** The room behind a card goes silent (when the page is not the one in front). */
+  private hush(): void {
+    if (this.phase === "playing") return;
+    try {
+      void this.sound.ctx.suspend().catch(() => {});
+    } catch {
+      // (a context that cannot be suspended so)
+    }
+  }
+  private frontIn = 0;
 
   private setPhase(p: Phase): void {
     this.phase = p;
@@ -433,7 +456,7 @@ export class Game {
     this.fx.clear();
     this.cast.clear();
     this.go((n - 1) % PLACES.length);
-    const place = this.place, { n: count, strollers } = place.people(Math.floor((n - 1) / PLACES.length));
+    const place = this.place, { n: count, strollers } = place.people(Math.floor((n - 1) / PLACES.length), this.touch);
     place.reset();
     this.target = this.cast.populate(place, count, strollers, place.crowd(Math.floor((n - 1) / PLACES.length), this.touch));
     this.rounds = ROUNDS;
@@ -441,6 +464,9 @@ export class Game {
     this.alarmed = false;
     this.pending = null;
     this.outcome = null;
+    this.bust = null;
+    this.warned = false;
+    this.ticked = 0;
     this.result = null;
     this.shot = null;
     this.rifle.visible = false;
@@ -452,10 +478,10 @@ export class Game {
     Object.assign(this.breath, { air: 1, holding: false, spent: false, k: 1 });
     Object.assign(this.aim, place.look());
     this.zoom = 1;
-    this.banner = { text: `CONTRACT ${n}`, sub: `${place.name} - TARGET: ${TRAIT_TEXT[this.target.trait]}`, color: V.amber, age: 0 };
+    this.banner = { text: `CONTRACT ${n}`, sub: `${place.name} - TARGET: ${this.told().join(", ")}`, color: V.amber, age: 0 };
     this.subtitle.until = 0;
     // the handler: where to look, who it is, go; each line waits for the one before
-    const ids = [place.intro, `brief-${this.target.trait}`, "go"];
+    const ids = [place.intro, ...(this.cast.wanted?.ids ?? [`brief-${this.target.trait}`]), "go"];
     let at = this.clock + 0.7;
     this.queue = ids.map((id) => {
       const clip = this.sound.clip(id), line = { at, id };
@@ -485,6 +511,14 @@ export class Game {
       this.keys.delete(e.code);
       if (e.code === "ShiftLeft" || e.code === "ShiftRight") this.letGo();
     });
+    // behind another window or tab it makes no sound: a contract under way is paused (below), and the room behind a card is hushed until the window is back
+    const hush = () => this.hush();
+    const back = () => {
+      if (this.phase !== "paused" && !document.hidden && document.hasFocus()) this.sound.resume();
+    };
+    on(window, "blur", hush);
+    on(window, "focus", back);
+    on(document, "visibilitychange", () => (document.hidden ? hush() : back()));
     // Safari has its own ways with the window's focus and the mouse (below); the others are left as they were
     if (!SAFARI) on(window, "blur", () => this.pause());
     else {
@@ -567,7 +601,7 @@ export class Game {
       this.fingered = performance.now();
       if (this.phase !== "playing") return;
       // (during an opening, a touch anywhere gets on with it)
-      if (this.intro) return this.fire();
+      if (this.intro || this.bust) return this.fire();
       try {
         this.canvas.setPointerCapture(e.pointerId);
       } catch {
@@ -637,7 +671,7 @@ export class Game {
   }
   /** what those buttons show, read each frame */
   get gauges() {
-    return { air: this.breath.air, holding: this.breath.holding, spent: this.breath.spent, rounds: this.rounds, of: ROUNDS, bolt: this.bolt > 0, zoom: ZOOMS[this.zoom], busy: !!this.shot || !!this.intro || !!this.outcome };
+    return { air: this.breath.air, holding: this.breath.holding, spent: this.breath.spent, rounds: this.rounds, of: ROUNDS, bolt: this.bolt > 0, zoom: ZOOMS[this.zoom], busy: !!this.shot || !!this.intro || !!this.outcome || !!this.bust };
   }
 
   /** breathe in and hold: the crosshair settles, for as long as the air lasts */
@@ -702,8 +736,14 @@ export class Game {
   /** Move everything on by dt of the player's time. Returns how much time passed in the room: almost none while a bullet is in the air. */
   private advance(dt: number): number {
     this.clock += dt;
+    // (a page that was never in front, or lost the front without being told, is silent too: looked at twice a second)
+    if (this.phase !== "playing" && (this.frontIn -= dt) <= 0) {
+      this.frontIn = 0.5;
+      if ((document.hidden || !document.hasFocus()) && this.sound.ctx.state === "running") this.hush();
+    }
     let world = dt;
     if (this.intro) world = dt * this.opening(dt);
+    else if (this.bust) this.arresting(dt);
     else if (this.shot) world = dt * this.flight(dt);
     else this.scope(dt);
     this.cast.pace = dt > 0 ? world / dt : 1;
@@ -719,7 +759,7 @@ export class Game {
     this.shake = Math.max(0, this.shake - dt * 3);
     this.banner.age += dt;
     // the target got away, or the chance went by
-    if (!this.shot && !this.intro && !this.outcome && !this.pending && this.phase === "playing" && (this.target?.state === "gone" || this.place.over())) this.settle("gone", false);
+    if (!this.shot && !this.intro && !this.bust && !this.outcome && !this.pending && this.phase === "playing" && (this.target?.state === "gone" || this.place.over())) this.settle("gone", false);
     if (this.outcome && !this.shot) {
       this.outcome.in -= dt;
       if (this.outcome.in <= 0) {
@@ -743,6 +783,20 @@ export class Game {
       const dy = (k.has("ArrowLeft") ? look : 0) - (k.has("ArrowRight") ? look : 0), dp = (k.has("ArrowUp") ? look : 0) - (k.has("ArrowDown") ? look : 0);
       if (dy || dp) this.turn(dy, dp);
       if (!this.outcome) this.watch += dt;
+      const limit = this.place.limit;
+      if (limit && !this.outcome && !this.pending) {
+        // only so long here: the handler says when it is nearly gone, the last seconds tick, and then they come
+        const left = limit.seconds - this.watch;
+        if (left <= 15 && !this.warned) {
+          this.warned = true;
+          this.radio("hurry");
+        }
+        if (left <= 10 && left > 0 && Math.ceil(left) !== this.ticked) {
+          this.ticked = Math.ceil(left);
+          this.sound.hit("t", 1.9, 0.22);
+        }
+        if (left <= 0) return this.caught();
+      }
       // what the handler has to say, in order
       while (this.queue.length && this.clock >= this.queue[0].at) this.radio(this.queue.shift()!.id);
     } else if (this.phase === "menu") {
@@ -856,7 +910,7 @@ export class Game {
    * it up to the shoulder and leans in to the scope.
    */
   private assembly(B: Beams, alpha: number, dt: number): void {
-    const it = this.intro!, t = it.t, eye = this.eye, K = CREW_HEAD, snd = this.sound;
+    const it = this.intro!, t = it.t, eye = this.eye, K = CREW_HEAD, snd = this.sound, low = !!this.place.opening!.stealth;
     const q = new THREE.Quaternion().setFromEuler(this.tmpE.set(this.aim.pitch, this.aim.yaw, 0, "YXZ"));
     const d = new THREE.Vector3(0, 0, -1).applyQuaternion(q), right = new THREE.Vector3(1, 0, 0).applyQuaternion(q), up = new THREE.Vector3(0, 1, 0).applyQuaternion(q);
     const fwd = new THREE.Vector3(d.x, 0, d.z).normalize(), across = new THREE.Vector3(right.x, 0, right.z).normalize();
@@ -864,7 +918,27 @@ export class Game {
     this.rifle.visible = false;
     // where they end up (the eye at the scope) says where they sit; before that they sit up straight
     const leant = eye.clone().addScaledVector(d, -0.36 - 9.6 * K).addScaledVector(up, 0.078 - 15.2 * K).addScaledVector(right, -3.3 * K);
-    const hip = P(leant, -0.14, 0, -0.5), raise = smooth((t - BUILD.raise) / 0.9), neck = P(hip, 0.02, 0, 0.52).lerp(leant, raise);
+    const raise = smooth((t - BUILD.raise) / 0.9);
+    let hip = P(leant, -0.14, 0, -0.5), neck = P(hip, 0.02, 0, 0.52).lerp(leant, raise), legs: Sitter["legs"], carried: THREE.Vector3 | null = null, down = 0;
+    let box = P(hip, 0.45, 0, -0.5);
+    if (low) {
+      // keeping out of sight: in at a crouch from behind, a case in one hand; down on one knee under the wall; up on that knee only to lean the rifle over
+      const creep = 1.8 * (1 - smooth(t / 1.7)), settle = smooth((t - 1.3) / 0.6);
+      const kneel = P(leant, -0.2, 0, -0.5), floor = kneel.y - 0.5, squat = P(kneel, -0.15 - creep, 0, -0.2);
+      const ground = (f: number, r: number, u = 0) => P(squat, f, r, 0).setY(floor + u);
+      hip = squat.clone().lerp(kneel, raise);
+      neck = P(squat, 0.3, 0, 0.3).lerp(leant, raise);
+      const stride = (side: number) => {
+        const ph = t * 7 + (side > 0 ? 0 : Math.PI);
+        return { knee: P(hip, 0.36 + 0.08 * Math.sin(ph), side * 0.12, 0.1), foot: ground(0.14 + 0.2 * Math.sin(ph), side * 0.12, 0.07 * Math.max(0, Math.cos(ph))) };
+      };
+      const R = stride(1), L = stride(-1), footL = ground(0.38 + 0.2 * raise, -0.14);
+      legs = { kneeR: R.knee.lerp(ground(0.33, 0.1, 0.03), settle), footR: R.foot.lerp(ground(-0.09, 0.1, 0.03), settle), kneeL: L.knee.lerp(P(footL, 0.02, 0, 0.45), settle), footL: L.foot.lerp(footL, settle) };
+      // the case: carried at arm's length, then set down by the knee
+      down = smooth((t - 1.5) / 0.5);
+      carried = P(hip, 0.12, 0.3, -0.02);
+      box = P(carried, 0, 0, -0.12).lerp(ground(0.42, 0.36, 0.1), down);
+    }
     // the rifle: across the knees while it is put together, pointing off to their left; then up to where it is aimed
     const qLap = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 0, -1), across.clone().multiplyScalar(-0.9).addScaledVector(fwd, 0.4).setY(-0.08).normalize());
     const lap = P(hip, 0.3, 0, 0.2).sub(new THREE.Vector3(0, 0, 1.1).applyQuaternion(qLap));
@@ -887,12 +961,25 @@ export class Game {
     }
     // the hands: on the knees; down to the case and up with the first of it; then one at the grip, the other at whatever is going on (or under the barrel)
     const first = BUILD.parts[0].when, has = t >= first, reach = smooth((t - BUILD.reach) / 0.35) * (1 - smooth((t - first) / 0.3));
-    const box = P(hip, 0.45, 0, -0.5);
-    const handR = has ? at(0.03, -0.07, 1.15) : P(hip, 0.38, 0.1, 0.1).lerp(box, reach);
-    const handL = busy ?? (has ? at(0, -0.035, 0.72) : P(hip, 0.38, -0.1, 0.1).lerp(box, reach));
+    const handR = has ? at(0.03, -0.07, 1.15) : (carried ? carried.clone().lerp(P(hip, 0.3, 0.12, 0.14), down) : P(hip, 0.38, 0.1, 0.1)).lerp(box, reach);
+    const handL = busy ?? (has ? at(0, -0.035, 0.72) : P(hip, low ? 0.3 : 0.38, low ? -0.14 : -0.1, low ? 0.14 : 0.1).lerp(box, reach));
+    if (low && t <= BUILD.reach) {
+      // the case, shut: in the hand, then on the roof
+      const c = [P(box, -0.14, -0.3, -0.06), P(box, -0.14, 0.3, -0.06), P(box, 0.14, 0.3, -0.06), P(box, 0.14, -0.3, -0.06)], a = alpha * 0.9;
+      c.forEach((p0, i) => {
+        const p1 = c[(i + 1) % 4];
+        B.seg(p0.x, p0.y, p0.z, p1.x, p1.y, p1.z, V.blueMid, 1.05, a);
+        B.seg(p0.x, p0.y - 0.1, p0.z, p1.x, p1.y - 0.1, p1.z, V.blueMid, 0.85, a);
+        B.seg(p0.x, p0.y, p0.z, p0.x, p0.y - 0.1, p0.z, V.blueMid, 0.85, a);
+      });
+      if (down >= 1 && !it.done.has("set")) {
+        it.done.add("set");
+        snd.hit("B", 1.4, 0.12);
+      }
+    }
     if (t > BUILD.reach) {
       // the case it came in, open at their feet
-      const a = alpha * smooth((t - BUILD.reach) / 0.3) * 0.9, c = [P(box, -0.14, -0.3, -0.06), P(box, -0.14, 0.3, -0.06), P(box, 0.14, 0.3, -0.06), P(box, 0.14, -0.3, -0.06)];
+      const a = alpha * (low ? 1 : smooth((t - BUILD.reach) / 0.3)) * 0.9, c = [P(box, -0.14, -0.3, -0.06), P(box, -0.14, 0.3, -0.06), P(box, 0.14, 0.3, -0.06), P(box, 0.14, -0.3, -0.06)];
       c.forEach((p0, i) => {
         const p1 = c[(i + 1) % 4];
         B.seg(p0.x, p0.y, p0.z, p1.x, p1.y, p1.z, V.blueMid, 1.05, a);
@@ -905,18 +992,174 @@ export class Game {
         snd.hit("click", 0.95, 0.25, 0.12);
       }
     }
-    drawSeated(B, { hip, neck, fwd, right: across, twist: 0.1 * raise, handR, handL }, mix(V.blue, V.white, 0.55), alpha);
+    drawSeated(B, { hip, neck, fwd, right: across, twist: 0.1 * raise, handR, handL, legs }, mix(V.blue, V.white, 0.55), alpha);
     if (alpha <= 0.5) return;
-    // the head: to the stage; down at the hands while they work; then in to the scope
-    const down = smooth((t - BUILD.reach) / 0.4) * (1 - raise);
-    const headQ = new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().makeBasis(d, up, right)).multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), -0.55 * down));
+    // the head: to the stage (or, keeping low, over one shoulder and the other); down at the hands while they work; then in to the scope
+    const bowed = smooth((t - BUILD.reach) / 0.4) * (1 - raise), about = low ? 1.0 * Math.sin(t * 2.7) * (1 - smooth((t - 1.9) / 0.4)) : 0;
+    const headQ = new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().makeBasis(d, up, right)).multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), about)).multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), -0.55 * bowed));
     this.cast.extra(0, neck, headQ, this.camera.position, dt, K);
+  }
+
+  // ------------------------------------------------------------------ out of time
+  /** The time at the scope is up (`Place.limit`): the view goes outside, to watch them come. */
+  private caught(): void {
+    const limit = this.place.limit!;
+    this.letGo();
+    this.keys.clear();
+    this.bust = { t: 0, done: new Set() };
+    this.queue = [];
+    this.subtitle.until = 0;
+    this.banner = { text: "OUT OF TIME", sub: limit.banner, color: BLOOD, age: 0 };
+  }
+
+  /** the arrest's time: at its end, the card */
+  private arresting(dt: number): void {
+    const b = this.bust!;
+    if (this.phase !== "playing") return;
+    b.t += dt;
+    if (b.t < BUST) return;
+    this.result = { kind: "caught", head: false, unheard: false, seconds: this.watch, points: 0 };
+    if (document.pointerLockElement === this.canvas) document.exitPointerLock();
+    this.setPhase("failed");
+  }
+
+  /** the view of the arrest: from out over the street, looking back at the roof's edge, the door behind whoever is at it; drawing in */
+  private bustCamera(): void {
+    const cam = this.camera, eye = this.place.eye(this.eye), k = smooth(this.bust!.t / BUST);
+    cam.position.set(eye.x - 2.6 - 0.6 * k, eye.y + 1.35 - 0.35 * k, eye.z - 3.3 + 0.9 * k);
+    cam.lookAt(this.tmp.set(eye.x + 0.7 - 0.6 * k, eye.y - 0.2 - 0.15 * k, eye.z + 1.6 - 0.7 * k));
+    cam.fov = (Math.atan(Math.tan((23 * Math.PI) / 180) * Math.min(1.9, Math.max(1, 1 / cam.aspect))) * 360) / Math.PI;
+  }
+
+  /**
+   * The arrest: whoever has the rifle is at the edge, on one knee, as the opening left them. A
+   * door bangs open behind; two officers come out of it at a run, one with a light; the head at
+   * the scope comes round; the hands go up; one officer covers while the other closes, takes the
+   * wrists behind the back and bends their prisoner over the wall.
+   */
+  private arrest(B: Beams, dt: number): void {
+    const b = this.bust!, T = b.t, eye = this.place.eye(this.eye), K = CREW_HEAD, snd = this.sound, cam = this.camera.position, UP = new THREE.Vector3(0, 1, 0);
+    /** once, when its time comes */
+    const once = (key: string, at: number, f: () => void) => {
+      if (T < at || b.done.has(key)) return;
+      b.done.add(key);
+      f();
+    };
+    const shout = (id: string, from: THREE.Vector3, rate: number) => {
+      const clip = snd.clip(id);
+      if (!clip) return;
+      snd.say(clip, from, rate, 1.3, 4);
+      this.subtitle = { text: clip.say.toUpperCase(), until: this.clock + (clip.end - clip.start) / rate + 0.7 };
+    };
+    // the rifle where it was left, over the edge; whoever knelt behind it (not wherever the scope was last pointing: straight out)
+    const q = new THREE.Quaternion().setFromEuler(this.tmpE.set(-0.32, 0, 0, "YXZ")), fwd = new THREE.Vector3(0, 0, -1), across = new THREE.Vector3(1, 0, 0);
+    const d = fwd.clone().applyQuaternion(q), up = UP.clone().applyQuaternion(q);
+    const P = (base: THREE.Vector3, f: number, r: number, u: number) => base.clone().addScaledVector(fwd, f).addScaledVector(across, r).setY(base.y + u);
+    this.rifle.visible = true;
+    this.rifle.position.copy(eye).addScaledVector(d, S0);
+    this.rifle.quaternion.copy(q);
+    const leant = eye.clone().addScaledVector(d, -0.36 - 9.6 * K).addScaledVector(up, 0.078 - 15.2 * K).addScaledVector(across, -3.3 * K);
+    const hip = P(leant, -0.2, 0, -0.5), floor = hip.y - 0.5, ground = (f: number, r: number, u = 0) => P(hip, f, r, 0).setY(floor + u);
+    // round comes the head; up go the hands, and they sit back from the scope; behind the back; over the wall
+    const turn = smooth((T - 0.5) / 0.3) * (1 - smooth((T - 4.5) / 0.6)), rise = smooth((T - 2.1) / 0.6), held = smooth((T - 4.5) / 0.6), bent = smooth((T - 5.6) / 0.7);
+    const neck = leant.clone().lerp(P(hip, 0.02, 0, 0.55), rise).lerp(P(hip, 0.4, 0, 0.36), bent);
+    const backR = P(hip, -0.2, 0.07, 0.16 + 0.1 * bent), backL = P(hip, -0.2, -0.07, 0.16 + 0.1 * bent);
+    const handR = eye.clone().addScaledVector(d, -0.15).addScaledVector(up, -0.08).lerp(P(neck, 0.02, 0.3, 0.32), rise).lerp(backR, held);
+    const handL = eye.clone().addScaledVector(d, 0.3).addScaledVector(up, -0.035).lerp(P(neck, 0.02, -0.3, 0.32), rise).lerp(backL, held);
+    const footL = ground(0.43, -0.14), legs = { kneeR: ground(0.18, 0.1, 0.03), footR: ground(-0.24, 0.1, 0.03), kneeL: P(footL, 0.02, 0, 0.45), footL };
+    drawSeated(B, { hip, neck, fwd, right: across, twist: 0.1 * (1 - rise), handR, handL, legs }, mix(V.blue, V.white, 0.55), 1);
+    const qHead = new THREE.Quaternion().setFromEuler(this.tmpE.set(-0.32 * (1 - rise), 0, 0, "YXZ"));
+    const headQ = new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().makeBasis(fwd.clone().applyQuaternion(qHead), UP.clone().applyQuaternion(qHead), across))
+      .multiply(new THREE.Quaternion().setFromAxisAngle(UP, -1.9 * turn)).multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), -0.6 * bent));
+    this.cast.extra(0, neck, headQ, cam, dt, K);
+
+    // the door: thrown open, and the lights of the cars below coming up the stairs behind them
+    const limit = this.place.limit!, door = new THREE.Vector3(limit.door[0], floor, limit.door[1]), flash = Math.floor(T * 7) % 2 ? V.red : V.blue;
+    for (const x of [-0.5, -0.17, 0.17, 0.5]) B.seg(door.x + x, floor + 0.1, door.z + 0.12, door.x + x, floor + 1.95, door.z + 0.12, flash, 1.6, 0.85);
+    for (const x of [-0.5, 0.5]) B.seg(door.x + x, floor, door.z, door.x + x * 3.4, floor + 0.01, door.z - 3, flash, 0.85, 0.4);
+    B.seg(door.x - 0.5, floor + 2, door.z + 0.05, door.x + 0.5, floor + 2, door.z + 0.05, V.white, 2.1, 0.95);
+    once("door", 0.05, () => {
+      snd.hit("B", 0.7, 0.55);
+      snd.hit("K", 0.8, 0.4, 0.06);
+    });
+    once("radio", 0.25, () => this.radio("caught"));
+    for (let n = 0; n < 9; n++) once(`step${n}`, 0.45 + n * 0.26, () => snd.hit("Pf", 0.75 + 0.1 * (n % 2), 0.1));
+
+    /** an officer: where they stand at each time (out of sight before the first), and what their hands are doing */
+    const officer = (i: number, stops: [number, THREE.Vector3][], light: boolean, grabs: boolean): THREE.Vector3 | null => {
+      if (T < stops[0][0]) return null;
+      const where = (t: number) => {
+        let k = 0;
+        while (k < stops.length - 2 && t > stops[k + 1][0]) k++;
+        const [t0, a] = stops[k], [t1, c] = stops[k + 1];
+        return a.clone().lerp(c, smooth((t - t0) / (t1 - t0)));
+      };
+      const pos = where(T), speed = pos.distanceTo(where(T - 0.05)) / 0.05, go = Math.min(1, speed / 2.5);
+      // (they face whoever they have come for, all the way)
+      const f = this.tmp.set(hip.x - pos.x, 0, hip.z - pos.z).normalize().clone(), r = new THREE.Vector3(-f.z, 0, f.x);
+      const at = (base: THREE.Vector3, ff: number, rr: number, uu: number) => base.clone().addScaledVector(f, ff).addScaledVector(r, rr).addScaledVector(UP, uu);
+      const ph = T * 9.5 + i, h = at(pos, 0, 0, 0.92 + 0.03 * go * Math.abs(Math.sin(ph))), n = at(h, 0.14 * go + 0.04, 0, 0.56);
+      const leg = (side: number) => {
+        const a = ph + (side > 0 ? 0 : Math.PI);
+        const foot = at(pos, 0.32 * go * Math.sin(a) + side * 0.1 * (1 - go), side * 0.12, 0.1 * go * Math.max(0, Math.cos(a)));
+        return { knee: at(h, 0, side * 0.1, 0).lerp(foot, 0.5).addScaledVector(f, 0.1 + 0.08 * go), foot };
+      };
+      const R = leg(1), L = leg(-1), aim = 1 - go, take = grabs ? held : 0;
+      // the pistol: low while they run, up and out at arm's length when they stop; (the one who closes puts it away and takes the wrists)
+      const gun = at(h, 0.3, 0.1, 0.2).lerp(at(n, 0.56, 0.06, -0.06), aim);
+      const hR = gun.clone().lerp(backR, take), hL = (light ? at(n, 0.42, -0.24, 0.02) : at(gun, -0.02, -0.08, -0.03)).lerp(light ? at(n, 0.42, -0.24, 0.02) : backL, take);
+      const cloth = V.blue;
+      drawSeated(B, { hip: h, neck: n, fwd: f, right: r, twist: 0, handR: hR, handL: hL, legs: { kneeR: R.knee, footR: R.foot, kneeL: L.knee, footL: L.foot } }, cloth, 1);
+      if (take < 0.5) {
+        const tip = at(gun, 0.19, 0, 0.02);
+        B.seg(gun.x, gun.y + 0.02, gun.z, tip.x, tip.y, tip.z, V.white, 2.1, 1 - take);
+        B.seg(gun.x, gun.y + 0.02, gun.z, gun.x, gun.y - 0.08, gun.z, V.white, 1.6, 1 - take);
+      }
+      if (light) {
+        // the light: a cone from the hand to their prisoner's back
+        const to = hip.clone().lerp(neck, 0.5);
+        for (const [dx, dy] of [[0.22, 0], [-0.22, 0], [0, 0.22], [0, -0.22]]) B.seg(hL.x, hL.y, hL.z, to.x + r.x * dx, to.y + dy, to.z + r.z * dx, V.white, 0.6, 0.3);
+        for (let k = 0; k < 8; k++) {
+          const a0 = (k / 8) * Math.PI * 2, a1 = ((k + 1) / 8) * Math.PI * 2;
+          B.seg(to.x + r.x * Math.cos(a0) * 0.22, to.y + Math.sin(a0) * 0.22, to.z + r.z * Math.cos(a0) * 0.22, to.x + r.x * Math.cos(a1) * 0.22, to.y + Math.sin(a1) * 0.22, to.z + r.z * Math.cos(a1) * 0.22, V.white, 0.85, 0.45);
+        }
+      }
+      // the cap: a band, a wider crown, the peak out over the eyes, a badge
+      const c = at(n, -0.01, 0, 0), ring = (y: number, rf: number, rs: number) => Array.from({ length: 10 }, (_, k) => at(c, Math.cos((k / 10) * Math.PI * 2) * rf, Math.sin((k / 10) * Math.PI * 2) * rs, y));
+      const band = ring(0.255, 0.125, 0.11), crown = ring(0.32, 0.15, 0.135);
+      for (let k = 0; k < 10; k++) {
+        const j = (k + 1) % 10;
+        B.seg(band[k].x, band[k].y, band[k].z, band[j].x, band[j].y, band[j].z, V.white, 1.3, 1);
+        B.seg(crown[k].x, crown[k].y, crown[k].z, crown[j].x, crown[j].y, crown[j].z, V.white, 1.05, 1);
+        if (k % 2 === 0) B.seg(band[k].x, band[k].y, band[k].z, crown[k].x, crown[k].y, crown[k].z, V.white, 0.85, 0.9);
+      }
+      const peak = [-1, -0.5, 0, 0.5, 1].map((s) => at(c, 0.125 + 0.09 * (1 - s * s * 0.8), s * 0.105, 0.245));
+      for (let k = 0; k < 4; k++) B.seg(peak[k].x, peak[k].y, peak[k].z, peak[k + 1].x, peak[k + 1].y, peak[k + 1].z, V.white, 1.3, 1);
+      const badge = at(c, 0.14, 0, 0.29);
+      B.seg(badge.x, badge.y - 0.02, badge.z, badge.x, badge.y + 0.02, badge.z, V.amber, 2.6, 1);
+      this.cast.extra(i, n, new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().makeBasis(f, UP, r)), cam, dt, K);
+      return n;
+    };
+    const first = officer(1, [[0.35, door], [2.0, ground(-1.9, 1.4)], [3.7, ground(-1.9, 1.4)], [4.5, ground(-0.62, 0.14)], [99, ground(-0.62, 0.14)]], false, true);
+    const second = officer(2, [[0.85, door], [2.9, ground(-1.9, -0.75)], [99, ground(-1.9, -0.75)]], true, false);
+    if (first) once("hands", 1.25, () => shout("cop-hands", first, 1));
+    if (second) once("still", 3.3, () => shout("cop-still", second, 0.92));
+    if (first) once("arrest", 5.3, () => shout("cop-arrest", first, 1));
+    once("cuffs", 6.5, () => {
+      snd.hit("click", 1.7, 0.4);
+      snd.hit("click", 2.0, 0.35, 0.22);
+    });
   }
 
   // ------------------------------------------------------------------ the shot
   /** Pull the trigger: the bullet goes where the crosshair is at this instant. (During an opening: get on with it.) */
   fire(): void {
     if (this.phase !== "playing" || this.shot || this.outcome || this.pending) return;
+    if (this.bust) {
+      // (once it has been seen what is happening: get on with it)
+      if (this.bust.t > 1.5) this.bust.t = Math.max(this.bust.t, BUST - 0.02);
+      return;
+    }
     if (this.intro) {
       this.intro.t = Math.max(this.intro.t, this.place.opening!.orbit - LEAD);
       return;
@@ -1239,6 +1482,7 @@ export class Game {
   private placeCamera(): void {
     const cam = this.camera, sh = this.shot;
     if (this.intro) this.introCamera();
+    else if (this.bust) this.bustCamera();
     else if (!sh) {
       // through the scope: the aim, and on it the breath's drift, the pulse and the last shot's kick
       const t = this.clock, A = this.still ? 0 : 0.0011 * (1 + 0.12 * Math.max(0, this.contract - 1)) * this.breath.k * this.place.rough;
@@ -1292,10 +1536,11 @@ export class Game {
     const B = this.live;
     B.begin();
     // (what the rifle is in fades as the view goes in at the scope)
-    const outside = this.intro ? 1 - smooth((this.entering() - 0.45) / 0.3) : this.shot ? 1 : 0;
+    const outside = this.intro ? 1 - smooth((this.entering() - 0.45) / 0.3) : this.shot || this.bust ? 1 : 0;
     this.cast.hideExtras();
     this.place.draw(B, outside);
     if (this.intro) this.crew(B, outside, world);
+    else if (this.bust) this.arrest(B, world);
     this.cast.draw(B, cam, world);
     this.fx.draw(B, cam);
     if (this.shot) this.drawBullet(B, this.shot);
@@ -1314,6 +1559,7 @@ export class Game {
     // what each throat is saying, at its mouth
     this.cast.drawWords(ctx, cam, this.w, this.h);
     if (this.intro) this.hudIntro(ctx);
+    else if (this.bust) this.hudBust(ctx);
     else if (this.shot) this.hudFlight(ctx, this.shot);
     else this.hudScope(ctx);
     const t3 = performance.now();
@@ -1430,7 +1676,7 @@ export class Game {
       text(ctx, op.rule, cx, y - 6, { size: 32, align: "center", weight: 800, ls: 0.12, alpha: a2, max });
       op.more.forEach((line, i) => text(ctx, line, cx, y + 22 + i * 21, { size: 15, color: V.blue, align: "center", alpha: a2, max }));
     }
-    if (a3 > 0 && this.target) text(ctx, `TARGET: ${TRAIT_TEXT[this.target.trait]}`, cx, y, { size: 26, color: V.amber, align: "center", weight: 800, ls: 0.12, alpha: a3, max });
+    if (a3 > 0 && this.target) text(ctx, `TARGET: ${this.told().join(", ")}`, cx, y, { size: 26, color: V.amber, align: "center", weight: 800, ls: 0.12, alpha: a3, max });
     if (this.clock < this.subtitle.until) text(ctx, this.subtitle.text, cx, h * 0.1 + 34, { size: 18, align: "center", alpha: Math.min(1, (this.subtitle.until - this.clock) / 0.4), max });
     if (u <= 0) text(ctx, this.touch ? "TAP TO SKIP" : "CLICK OR SPACE TO SKIP", w - 22, h - h * 0.05 + 5, { size: 12, color: V.blue, weight: 500, align: "right" });
   }
@@ -1460,6 +1706,26 @@ export class Game {
     }
   }
 
+  /** while the arrest is watched: a film's black bars, what it is, and what is being shouted */
+  private hudBust(ctx: CanvasRenderingContext2D): void {
+    const { w, h } = this, t = this.bust!.t, cx = w / 2, bar = h * 0.1, max = w - 24;
+    ctx.save();
+    ctx.globalCompositeOperation = "source-over";
+    ctx.fillStyle = "#000";
+    ctx.fillRect(0, 0, w, bar);
+    ctx.fillRect(0, h - bar, w, bar);
+    ctx.restore();
+    seg(ctx, 0, bar, w, bar, V.blueDim, 1, { alpha: 0.7 });
+    seg(ctx, 0, h - bar, w, h - bar, V.blueDim, 1, { alpha: 0.7 });
+    const a = smooth(t / 0.3) * (1 - smooth((t - 3.4) / 0.6)), y = h - bar - Math.max(64, h * 0.13);
+    if (a > 0) {
+      text(ctx, this.banner.text, cx, y, { size: 40, color: this.banner.color, align: "center", weight: 800, ls: 0.16, alpha: a, max });
+      text(ctx, this.banner.sub, cx, y + 30, { size: 16, align: "center", ls: 0.14, alpha: a, max });
+    }
+    if (this.clock < this.subtitle.until) text(ctx, this.subtitle.text, cx, bar + 34, { size: 18, align: "center", alpha: Math.min(1, (this.subtitle.until - this.clock) / 0.4), max });
+    if (t > 1.5 && this.phase === "playing") text(ctx, this.touch ? "TAP TO SKIP" : "CLICK OR SPACE TO SKIP", w - 22, h - h * 0.05 + 5, { size: 12, color: V.blue, weight: 500, align: "right" });
+  }
+
   private hudScope(ctx: CanvasRenderingContext2D): void {
     const { w, h } = this, cx = w / 2, cy = h / 2, R = Math.min(w, h) * 0.47;
     this.glass(ctx, R);
@@ -1472,12 +1738,21 @@ export class Game {
     const cw = text(ctx, `CONTRACT ${this.contract}`, 22, 38, { size: 18, weight: 700 });
     text(ctx, this.place.name, 22 + cw + 12, 38, { size: 18, color: V.blue });
     text(ctx, "TARGET", 22, 64, { size: 12, color: V.blue, ls: 0.18 });
-    if (this.target) text(ctx, TRAIT_TEXT[this.target.trait], 22, 86, { size: 18, color: V.amber, weight: 700 });
-    const sw = text(ctx, "SCORE", 22, 112, { size: 12, color: V.blue, ls: 0.18 });
-    text(ctx, String(this.score), 22 + sw + 10, 112, { size: 15 });
+    // (told by how they look: a line for each thing said of them)
+    const told = this.target ? this.told() : [], below = 22 * Math.max(0, told.length - 1);
+    told.forEach((line, i) => text(ctx, line, 22, 86 + 22 * i, { size: 18, color: V.amber, weight: 700 }));
+    const sw = text(ctx, "SCORE", 22, 112 + below, { size: 12, color: V.blue, ls: 0.18 });
+    text(ctx, String(this.score), 22 + sw + 10, 112 + below, { size: 15 });
     text(ctx, `${ZOOMS[this.zoom]}X`, w - 22, 44, { size: 26, weight: 700, align: "right" });
     text(ctx, this.range > 0 ? `${this.range.toFixed(0)} M` : "--- M", w - 22, 68, { size: 16, align: "right" });
-    text(ctx, `${Math.floor(this.watch / 60)}:${String(Math.floor(this.watch % 60)).padStart(2, "0")}`, w - 22, 90, { size: 16, color: V.blue, align: "right" });
+    const limit = this.place.limit, clock = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
+    if (!limit) text(ctx, clock(this.watch), w - 22, 90, { size: 16, color: V.blue, align: "right" });
+    else {
+      // only so long here: what is left of it, at the foot of the glass either side of the post (red, and beating, when it is nearly gone)
+      const left = Math.max(0, limit.seconds - this.watch), late = left <= 10, y = cy + R * 0.82;
+      text(ctx, "TIME", cx - 12, y - 2, { size: 12, color: late ? BLOOD : V.blue, align: "right", ls: 0.18 });
+      text(ctx, clock(Math.ceil(left)), cx + 12, y, { size: 22, color: late ? BLOOD : V.white, weight: 700, alpha: late ? 0.65 + 0.35 * Math.cos(left * Math.PI * 2) : 1 });
+    }
     // where there is singing: how loud it is now, and (the mark on the bar) how loud it has to be to hide a shot
     const need = this.place.drown;
     if (need !== null) {

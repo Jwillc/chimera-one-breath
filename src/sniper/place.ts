@@ -12,10 +12,11 @@ import { V, mix } from "../ui/colors.ts";
 import type { Kind } from "./sound.ts";
 
 /**
- * The thing that tells someone apart. The first six are anybody's; the rest are a stage's (the one
- * who is singing, and what the others are playing), for a place whose people are its players.
+ * The thing that tells someone apart. The first six are anybody's; then a stage's (the one who is
+ * singing, and what the others are playing), for a place whose people are its players; then what
+ * else a stranger in a crowd may have about them (`looks.ts`): a bag, or nothing.
  */
-export type Trait = "hat" | "tie" | "drink" | "phone" | "glasses" | "cigar" | "sing" | "crown" | "sword" | "cape" | "skull";
+export type Trait = "hat" | "tie" | "drink" | "phone" | "glasses" | "cigar" | "sing" | "crown" | "sword" | "cape" | "skull" | "bag" | "plain";
 
 /** somewhere to be: where, the way to face (forward is (cos th, sin th) over x and z), and what kind of place it is */
 export interface Spot {
@@ -78,6 +79,8 @@ export interface Opening {
   pace?: number;
   /** whoever has the rifle starts without it, as one of the crowd, and puts it together as the view goes round */
   assemble?: boolean;
+  /** (with `assemble`) they are not sitting among people but keeping out of sight: in at a crouch, the rifle put together on one knee below the edge, and only then leant over it */
+  stealth?: boolean;
 }
 
 export interface Place {
@@ -101,18 +104,28 @@ export interface Place {
   readonly home: { yaw: number; pitch: number };
   /** how near (m) a voice is at full level: the people are heard as if by a long microphone */
   readonly hear: number;
+  /**
+   * Where staying is the danger: how long there is at the scope (s) before somebody comes for
+   * whoever has the rifle, what the banner and the card say when they do, and the door they come
+   * out of (x, z, on the level the rifle is on). Null: as long as it takes.
+   */
+  readonly limit: { seconds: number; banner: string; card: string; door: [number, number] } | null;
+  /** how much talk carries to the rifle: how many may be talking at once, and the least quiet (s) between one starting and the next */
+  readonly talk: { at: number; gap: number };
   /** how unsteady the rifle's rest is (1: lying still) */
   readonly rough: number;
   /** where there is singing: how loud it has to be, against its loudest (0 to 1), for a shot to go unheard */
   readonly drown: number | null;
+  /** the people here are a crowd of strangers, each dressed differently, and the target is told by how they look (`looks.ts`), not by one thing */
+  readonly looks: boolean;
   /** the things that can tell someone apart here, what they talk like, and whether they are all men */
   readonly traits: Trait[] | null;
   readonly chat: Kind | null;
   readonly men: boolean;
   /** called for each sound the place itself makes (the game plays it) */
   sound: ((name: string, rate: number, level: number) => void) | null;
-  /** how many people the n-th time round (0 first), and how many of them wander */
-  people(lap: number): { n: number; strollers: number };
+  /** how many people the n-th time round (0 first), and how many of them wander; `light`: where every head costs (a phone), fewer if they are many */
+  people(lap: number, light?: boolean): { n: number; strollers: number };
   /** how many of the crowd there are besides (at the spots marked for them); `light`: where every head costs (a phone), fewer */
   crowd(lap: number, light: boolean): number;
   /** a shot has been heard here (the people are told by the game: this is for what the place itself does about it) */
@@ -158,10 +171,13 @@ export abstract class Scene implements Place {
   abstract readonly home: { yaw: number; pitch: number };
   abstract readonly hear: number;
   readonly rough: number = 1;
+  readonly talk: { at: number; gap: number } = { at: 2, gap: 0 };
+  readonly limit: { seconds: number; banner: string; card: string; door: [number, number] } | null = null;
   readonly traits: Trait[] | null = null;
   readonly chat: Kind | null = "chat";
   readonly men: boolean = false;
   readonly soft: boolean = false;
+  readonly looks: boolean = false;
   readonly drown: number | null = null;
   readonly opening: Opening | null = null;
   readonly bipod: boolean = true;
@@ -182,7 +198,7 @@ export abstract class Scene implements Place {
     this.fixed.end();
   }
 
-  abstract people(lap: number): { n: number; strollers: number };
+  abstract people(lap: number, light?: boolean): { n: number; strollers: number };
   abstract eye(out: THREE.Vector3): THREE.Vector3;
   abstract floor(x: number, z: number): number;
   abstract wayOut(p: { x: number; z: number; sit: number }): { x: number; z: number }[];

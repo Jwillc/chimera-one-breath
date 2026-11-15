@@ -28,11 +28,12 @@ import type { Kind, Playing, Sound } from "./sound.ts";
 import { BLOOD, type Fx, type Sink } from "./fx.ts";
 import type { Place, Spot, Trait } from "./place.ts";
 import { Things, drawShape, smoke, thingOf, thrown, type Shape, type ThingEvent } from "./things.ts";
+import { HAIR, SAID, WEAR, clauses, dress, tell, type Look } from "./looks.ts";
 
 export type { Trait };
 export const TRAITS: Trait[] = ["hat", "tie", "drink", "phone", "glasses", "cigar"];
 /** how the handler's line reads on screen */
-export const TRAIT_TEXT: Record<Trait, string> = { hat: "WEARING A HAT", tie: "WEARING A RED TIE", drink: "HOLDING A DRINK", phone: "ON THE PHONE", glasses: "WEARING GLASSES", cigar: "SMOKING", sing: "SINGING", crown: "WEARING A CROWN", sword: "HOLDING A SWORD", cape: "WEARING A CAPE", skull: "HOLDING A SKULL" };
+export const TRAIT_TEXT: Record<Trait, string> = { hat: "WEARING A HAT", tie: "WEARING A RED TIE", drink: "HOLDING A DRINK", phone: "ON THE PHONE", glasses: "WEARING GLASSES", cigar: "SMOKING", sing: "SINGING", crown: "WEARING A CROWN", sword: "HOLDING A SWORD", cape: "WEARING A CAPE", skull: "HOLDING A SKULL", bag: "CARRYING A BAG", plain: "" };
 /** what one of a crowd may have about them: it only makes them somebody (nobody is told to look for it) */
 const CROWD: Trait[] = ["hat", "glasses", "tie", "drink"];
 type Body = "male" | "female";
@@ -103,6 +104,9 @@ export interface Person {
   strollIn: number;
   /** one of the crowd: never the target */
   crowd: boolean;
+  /** their hair: its colour (null: none, or none to be seen under a hat), and whether it is worn long */
+  hair: string | null;
+  long: boolean;
   /** she sings (a stage's soprano): which phrase of the aria comes next, and how long until she starts it */
   sings: boolean;
   verse: number;
@@ -248,6 +252,10 @@ export class Cast {
   private h = 1;
   private clock = 0;
   private place!: Place;
+  /** where the target is told by how they look: the handler's clips for it, in order, and the same in words (null: told by one thing, as usual) */
+  wanted: { ids: string[]; lines: string[] } | null = null;
+  /** seconds before anyone else may start talking (`Place.talk.gap`) */
+  private lull = 0;
   /** what has left its owner and is falling, or lying where it fell */
   readonly things = new Things((e) => this.thingDid(e));
   /** how fast the room's time is running against the player's (the game says): what is heard is slowed with it */
@@ -310,6 +318,7 @@ export class Cast {
   }
 
   clear(): void {
+    this.lull = 0;
     for (const p of this.list) this.release(p);
     this.list.length = 0;
     this.things.clear();
@@ -338,7 +347,7 @@ export class Cast {
       }
       return b;
     };
-    n = Math.min(n, all.length, places);
+    n = Math.min(n, place.looks ? Infinity : all.length, places);
     const traits = shuffled(all).slice(0, n), colors = shuffled(CLOTHES);
     // (where there is a stage, somebody is singing on it)
     if (sung >= 0 && !traits.includes("sing")) traits[0] = "sing";
@@ -360,7 +369,7 @@ export class Cast {
         state: "calm", spot, route: at.route ? at.route.map((q) => ({ ...q })) : [], face: at.th, leaving: !!at.route, pace: at.pace ?? 1,
         sit: at.sit ? 1 : 0, gait: 0, phase: Math.random() * 6, t: 0, seed: Math.random() * 100,
         strolls: strolls && !!at.open, strollIn: 2 + Math.random() * 7,
-        crowd: !!at.crowd, sings: trait === "sing", verse: 1, breathIn: 0.8,
+        crowd: !!at.crowd, hair: null, long: false, sings: trait === "sing", verse: 1, breathIn: 0.8,
         talkIn: 0.4 + Math.random() * 3.5, voice: null, pitch: 0.92 + Math.random() * 0.18,
         react: 0, startled: 0, screamIn: 0,
         fall: 0, fallV: 0, down: false, fallAxis: new THREE.Vector3(1, 0, 0), pivot: 0, kick: 0, flash: 0, bleed: 0, wound: new THREE.Vector3(),
@@ -377,6 +386,24 @@ export class Cast {
       this.pose(p);
       this.list.push(p);
     };
+    this.wanted = null;
+    if (place.looks) {
+      // a crowd of strangers: each dressed in their own way, and one of them picked out by the least that nobody else shares
+      const looks: Look[] = dress(Math.min(n, spots.length));
+      looks.forEach((l) => {
+        const strolls = l.has === "phone" || left-- > 0, body: Body = Math.random() < 0.5 ? "male" : "female";
+        add(l.has, take((s) => (strolls ? !!s.open : !s.open)), body, strolls, WEAR[l.wear]);
+        const p = this.list[this.list.length - 1];
+        p.hair = l.hair === "bald" ? null : HAIR[l.hair];
+        p.long = body === "female" ? Math.random() < 0.75 : Math.random() < 0.15;
+      });
+      // (the target is someone it takes more than one thing to tell, where there is such a one: a crowd is meant to be hard)
+      const told = looks.map((_, i) => tell(looks, i)), all = told.map((t, i) => (t ? i : -1)).filter((i) => i >= 0), hard = all.filter((i) => told[i]!.length > 1);
+      const can = hard.length ? hard : all, who = can[Math.floor(Math.random() * can.length)] ?? 0;
+      const said = (told[who] ?? [1]).map((k) => SAID[clauses(looks[who])[k]!]);
+      this.wanted = { ids: ["look-target", ...said.map((c) => c.id)], lines: said.map((c) => c.text) };
+      return this.list[who];
+    }
     traits.forEach((trait, i) => {
       // the one who sings is a soprano, in white, at her mark
       if (trait === "sing") return add(trait, sung, "female", false, V.white);
@@ -398,6 +425,7 @@ export class Cast {
     const SPOTS = this.place.spots;
     let talking = 0;
     for (const p of this.list) if (p.voice && !p.voice.over && p.state === "calm" && !p.sings) talking++;
+    this.lull -= dt;
     for (const p of this.list) {
       if (p.state === "gone") continue;
       p.t += dt;
@@ -433,12 +461,13 @@ export class Cast {
           p.breathIn = BREATH;
         }
       } else if (p.state === "calm") {
-        // talk now and then (two at once at most), with a hand
+        // talk now and then (so many at once at most, and where little of it carries, a quiet after each), with a hand
         p.talkIn -= dt;
         if (p.talkIn <= 0 && !p.voice && this.place.chat) {
-          if (talking < 2) {
+          if (talking < this.place.talk.at && this.lull <= 0) {
             this.say(p, p.trait === "phone" ? "phone" : this.place.chat, 1);
             talking++;
+            this.lull = this.place.talk.gap * (0.7 + 0.9 * Math.random());
             p.talkIn = 2.2 + Math.random() * 5;
           } else p.talkIn = 0.3 + Math.random() * 0.6;
         }
@@ -848,6 +877,7 @@ export class Cast {
       hit("K", kind === "crown" ? 2.3 : 1.7, 0.06 + 0.2 * loud);
       hit("click", kind === "crown" ? 1.9 : 1.3, 0.05 + 0.15 * loud, 0.012);
     } else if (kind === "skull") hit("K", 0.85, 0.06 + 0.18 * loud);
+    else if (kind === "bag") hit("Pf", 0.6, 0.06 + 0.12 * loud);
     else {
       // a cigar: a tick, and the first time its end throws sparks
       hit("t", 1.3, 0.03 + 0.04 * loud);
@@ -928,7 +958,8 @@ export class Cast {
     }
     if (p.trait === "tie") {
       const a = at(0.93, 0.112 * s, 0), k = at(0.86, 0.128 * s, 0), b = at(0.5, 0.132 * s, 0), tip = at(0.4, 0.125 * s, 0), w = 0.034 * s;
-      const red = flash ? V.white : V.red;
+      // (red, unless that is what they are dressed in)
+      const red = flash || p.color === V.red ? V.white : V.red;
       for (const side of [-1, 1]) {
         L(a[0], a[1], a[2] + side * 0.02 * s, k[0], k[1], k[2], red, 2.1);
         L(k[0], k[1], k[2], b[0], b[1], b[2] + side * w, red, 2.1);
@@ -1100,6 +1131,23 @@ export class Cast {
         const a0 = (i / n) * Math.PI * 2, a1 = ((i + 1) / n) * Math.PI * 2;
         seg(P(-1 + Math.cos(a0) * 7.6, 16.5, Math.sin(a0) * 6), P(-1 + Math.cos(a1) * 7.6, 16.5, Math.sin(a1) * 6), color, 0.85, 0.7 * p.xray);
       }
+    }
+    if (p.hair) {
+      // hair: strands from the brow over the crown to the nape (worn long, on down past the shoulders), and a line where it starts
+      const hair = p.hair, brow: [number, number, number][] = [];
+      for (const zf of [-0.9, -0.6, -0.3, 0, 0.3, 0.6, 0.9]) {
+        const rz = Math.sqrt(1 - zf * zf * 0.8), far = p.long ? 250 : 205;
+        let prev: [number, number, number] | null = null;
+        for (let a = 38; a <= far; a += 16.7) {
+          // (over the skull, a little off it; past the nape it hangs)
+          const r = (a * Math.PI) / 180, hang = Math.max(0, a - 190) / 60;
+          const q = P(-0.6 + Math.cos(r) * 10.4 * rz - hang * 1.5, 14.6 + Math.sin(r) * 9.4 * (0.55 + 0.45 * rz) - hang * 9, zf * 8.4 * (1 + 0.1 * hang));
+          if (prev) seg(prev, q, hair, 1.3, 0.95);
+          else brow.push(q);
+          prev = q;
+        }
+      }
+      for (let i = 0; i < brow.length - 1; i++) seg(brow[i], brow[i + 1], hair, 1.3, 0.95);
     }
     // the hat, the glasses, the cigar and its smoke, while they are still on the head
     const s = p.thing;

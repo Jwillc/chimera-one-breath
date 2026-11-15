@@ -104,6 +104,12 @@ SONG = [
 ]
 
 # the handler on the radio: the engine's own speech (id -> what she says)
+# the police, when they reach whoever has the rifle before the target is found (men's voices; the handler is a woman)
+OFFICERS = {
+    "cop-hands": "Police! Hands up!",
+    "cop-still": "Do not move.",
+    "cop-arrest": "You are under arrest.",
+}
 HANDLER = {
     "intro": "Eyes on the lit window.",
     "intro-pool": "Eyes on the pool, below you.",
@@ -111,6 +117,28 @@ HANDLER = {
     "intro-drive": "Eyes on the far bank. We are not stopping.",
     "intro-woods": "Eyes on the camp, through the trees.",
     "intro-opera": "Eyes on the stage. Fire on the high note.",
+    "intro-block": "Eyes on the square, below you.",
+    # a stranger in a crowd is told by how they look: "your target", then each thing said of them (src/sniper/looks.ts)
+    "look-target": "Your target.",
+    "look-blond": "Blond hair.",
+    "look-red": "Red hair.",
+    "look-white": "White hair.",
+    "look-pink": "Pink hair.",
+    "look-green": "Green hair.",
+    "look-bald": "Bald.",
+    "look-hat": "Wearing a hat.",
+    "look-in-red": "Dressed in red.",
+    "look-in-green": "Dressed in green.",
+    "look-in-blue": "Dressed in blue.",
+    "look-in-pink": "Dressed in pink.",
+    "look-in-white": "Dressed in white.",
+    "look-in-orange": "Dressed in orange.",
+    "look-glasses": "Wearing glasses.",
+    "look-tie": "Wearing a tie.",
+    "look-drink": "Holding a drink.",
+    "look-phone": "On the phone.",
+    "look-cigar": "Smoking.",
+    "look-bag": "Carrying a bag.",
     "brief-hat": "Your target is wearing a hat.",
     "brief-tie": "Your target is wearing a red tie.",
     "brief-drink": "Your target is holding a drink.",
@@ -123,6 +151,9 @@ HANDLER = {
     "brief-cape": "Your target is wearing a cape.",
     "brief-skull": "Your target is holding a skull.",
     "go": "One breath. One shot.",
+    # where there is only so long (a roof somebody will come up to): near the end, and at it
+    "hurry": "Fifteen seconds.",
+    "caught": "They are on the roof.",
     "win-1": "Target down.",
     "win-2": "Good shot. Target down.",
     "win-3": "Clean. Go home.",
@@ -214,6 +245,9 @@ def main():
     for cid, text in HANDLER.items():
         jobs.append(("text", TAKES / cid, text, "female"))
         clips.append({"id": cid, "kind": "line", "body": "female", "say": text, "words": []})
+    for cid, text in OFFICERS.items():
+        jobs.append(("text", TAKES / cid, text, "male"))
+        clips.append({"id": cid, "kind": "line", "body": "male", "say": text, "words": []})
     if only:
         # only what was asked for (a kind or an id), added to what is already there
         wanted = [c for c in clips if c["kind"] in only or c["id"] in only]

@@ -199,6 +199,17 @@ export function thingOf(trait: Trait, s: number, u: number): Shape | null {
     const pts = [[R, 0.1, 0], [-R, 0.1, 0], [0, 0.1 + R, 0], [0, 0.1 - R, 0], [0, 0.1, R], [0, 0.1, -R]].flatMap((p) => pen.pt(p));
     return { kind: trait, on: "hand", at: [0, 0.1 * s, 0], reach: 0.05 * s, ...pen.lines(), dry: pen.color.length, pts, lip: [0, 0, 0], gyr: 0.06 * s, drag: 0.08, bounce: 0.35, grip: 0.5, floats: false, breaks: Infinity, blast: 2.5 };
   }
+  if (trait === "bag") {
+    // carried at arm's length: a box, a flap across it, a loop of handle up to the hand
+    const w = 0.34, h = 0.24, dp = 0.1, pen = new Pen([0, -0.14, 0], s), BAG = "#ffd27a";
+    for (const z of [-dp / 2, dp / 2]) loop(pen, [[-w / 2, -h, z], [w / 2, -h, z], [w / 2, 0, z], [-w / 2, 0, z]], BAG, 1.3);
+    for (const [x, y] of [[-w / 2, -h], [w / 2, -h], [w / 2, 0], [-w / 2, 0]]) pen.line([x, y, -dp / 2], [x, y, dp / 2], BAG, 0.85, 0.8);
+    pen.line([-w / 2, -0.08, dp / 2], [w / 2, -0.08, dp / 2], BAG, 0.85, 0.8);
+    pen.line([-0.09, 0, 0], [0, 0.1, 0], BAG, 1.05);
+    pen.line([0.09, 0, 0], [0, 0.1, 0], BAG, 1.05);
+    const pts = [[-w / 2, -h, -dp / 2], [w / 2, -h, -dp / 2], [-w / 2, -h, dp / 2], [w / 2, -h, dp / 2], [-w / 2, 0, 0], [w / 2, 0, 0], [0, 0.1, 0]].flatMap((p) => pen.pt(p));
+    return { kind: trait, on: "hand", at: [0, -0.24 * s, 0], reach: 0.02 * s, ...pen.lines(), dry: pen.color.length, pts, lip: [0, 0, 0], gyr: 0.13 * s, drag: 0.06, bounce: 0.15, grip: 0.7, floats: false, breaks: Infinity, blast: 1.5 };
+  }
   if (trait === "phone") {
     // held up along the side of the head
     const w = 0.065 * s + 0.01, h = 0.16 * s + 0.02, pen = new Pen([0, 0, 0], 1);

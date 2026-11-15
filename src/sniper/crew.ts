@@ -22,6 +22,8 @@ export interface Sitter {
   twist: number;
   handR: THREE.Vector3;
   handL: THREE.Vector3;
+  /** where the knees and feet are, if not as someone sitting on a seat (crouching, kneeling) */
+  legs?: { kneeR: THREE.Vector3; footR: THREE.Vector3; kneeL: THREE.Vector3; footL: THREE.Vector3 };
 }
 
 /** Someone sitting: a trunk of three rings, arms out to where the hands are, thighs along the seat and shins down. */
@@ -58,7 +60,7 @@ export function drawSeated(B: Lines, s: Sitter, color: string, alpha: number): v
     line(hand, P(hand, 0.07, 0, 0), SKIN, 1.3);
   }
   for (const side of [1, -1]) {
-    const H = P(s.hip, 0, side * 0.1, 0), K = P(H, 0.42, 0, 0.05), F = P(K, 0.1, 0, -0.4);
+    const H = P(s.hip, 0, side * 0.1, 0), K = s.legs ? (side > 0 ? s.legs.kneeR : s.legs.kneeL) : P(H, 0.42, 0, 0.05), F = s.legs ? (side > 0 ? s.legs.footR : s.legs.footL) : P(K, 0.1, 0, -0.4);
     limb(H, K, 0.06);
     limb(K, F, 0.045);
     line(F, P(F, 0.18, 0, 0), dim, 1.3);

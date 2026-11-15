@@ -15,7 +15,7 @@ import "./sniper.css";
 
 /** "THE POOL" as it reads in a sentence */
 const place = (name: string) => name.toLowerCase();
-const LOST = { wrong: "Wrong target", gone: "Target lost", empty: "Out of rounds", down: "" };
+const LOST = { wrong: "Wrong target", gone: "Target lost", empty: "Out of rounds", caught: "Caught", down: "" };
 
 /** whether this is played with fingers: a touch screen as the main pointer, or a touch has been seen */
 function useTouch(): boolean {
@@ -179,14 +179,14 @@ export function SniperPage() {
             </p>
           ) : phase === "failed" && result ? (
             <p>
-              {result.kind === "wrong" ? `The handler said: ${snap.target.toLowerCase()}. That was somebody else.` : result.kind === "gone" ? snap.lost : "Three rounds, and the target is still breathing."} Score {snap.score}.
+              {result.kind === "wrong" ? `The handler said: ${snap.target.toLowerCase()}. That was somebody else.` : result.kind === "gone" || result.kind === "caught" ? snap.lost : "Three rounds, and the target is still breathing."} Score {snap.score}.
             </p>
           ) : phase === "paused" ? (
             <p>
               Contract {snap.contract}, {place(snap.place)}. Target: {snap.target.toLowerCase()}.
             </p>
           ) : (
-            <p>Six contracts: a lit condo, a rooftop pool, the steps of a grand building, a café seen from a moving car, a camp in the woods, a night at the opera. A few people in each, and one of them is yours. Every sound is a simulated throat: their talk, the trigger, the bullet, your own breath.</p>
+            <p>Seven contracts: a lit condo, a rooftop pool, the steps of a grand building, a café seen from a moving car, a camp in the woods, a night at the opera, a crowded square. A few people in each, a crowd in the last, and one of them is yours. Every sound is a simulated throat: their talk, the trigger, the bullet, your own breath.</p>
           )}
           {!error && (
             <button className="primary large" disabled={!game} onClick={() => game?.start()}>

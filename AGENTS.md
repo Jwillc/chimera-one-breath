@@ -11,7 +11,8 @@ https://jwillc.github.io/chimera-one-breath/; a push to `main` rebuilds and rede
 - `src/sniper/people.ts`: the cast (bodies, minds, wounds, the X-ray). `things.ts`: what they carry,
   worn or loose. `crew.ts`: the shooter and driver seen in an opening.
 - `src/sniper/place.ts`: what a place is (`Place`, `Scene`). `condo.ts`, `pool.ts`, `steps.ts`,
-  `drive.ts`, `woods.ts`, `opera.ts`: the six, in the order of `PLACES` in `game.ts`.
+  `drive.ts`, `woods.ts`, `opera.ts`, `block.ts`: the seven, in the order of `PLACES` in `game.ts`.
+  `looks.ts`: how a crowd of strangers is dressed, and what is said of one to tell them apart.
 - `src/sniper/sound.ts`, `fx.ts`, `words.ts`: playing the voices, blood and glass, how a cry is spelled.
 - `src/sniper/SniperPage.tsx` and `sniper.css`: the card over the canvas.
 - `public/shows/sniper/`: every sound, rendered ahead. `sounds/compose.py`: the script that renders
@@ -62,13 +63,37 @@ https://jwillc.github.io/chimera-one-breath/; a push to `main` rebuilds and rede
   `Place.alarm()` has been called, each along their row to an aisle and out. At most nine screams
   sound at once (`SCREAMS` in `people.ts`). Twenty heads cost about 8 ms a frame on a desktop:
   `Place.crowd(lap, light)` gives fewer where the game is played by touch.
+- **On the block the target is told by how they look.** A place with `looks` set gets a crowd from
+  `dress()` in `looks.ts`: each person a head (hair of one of five colours, or bald, or a hat over
+  it), clothes of one of six colours and perhaps one thing (`HAS`: a `bag` and `plain`, nothing,
+  besides the ordinary six), no two the same in all three. `tell()` finds the fewest of those that
+  nobody else shares, and the target is someone it takes at least two to tell, where there is one.
+  The handler says them one clip each (`look-target`, then `SAID[...].id`, in `sounds/compose.py`)
+  and the gauges show a line for each (`Cast.wanted`, `Game.told()`). A new colour or thing needs
+  its entry in `SAID` and its clip; `tests/sniper-block.test.ts` holds every clause to having one.
+  Twenty heads there (fourteen by touch: `Place.people(lap, light)`), about 8 ms a frame on a desktop.
+- **The block has forty seconds.** `Place.limit` is how long there is at the scope; the countdown is
+  drawn at the foot of the glass either side of the post (`hudScope`), the handler says "fifteen
+  seconds", the last ten tick. At nought `Game.caught()` starts the arrest (`arrest`, `bustCamera`,
+  `hudBust`, `BUST` seconds): two officers out of `limit.door`, drawn like the crew (`drawSeated`
+  with `legs` given is anyone, standing or kneeling), their lines in `OFFICERS` in
+  `sounds/compose.py`; then the card, result kind `caught`. The clock stops while a bullet flies.
+- **Not in front, not heard.** A contract under way pauses when the window loses focus; behind a
+  card the sound is suspended instead (`Game.hush`), and comes back with the focus.
 - **The people are adults.**
-- A place may have an `opening` (the drive and the opera do): the view goes round whoever has the
+- A place may have an `opening` (the drive, the opera and the block do): the view goes round whoever has the
   rifle, with a line of what is different here, then in at the scope. Seen once per contract,
   skipped by a click, not replayed on "Try again". The drive's is in slow motion round the car;
   the opera's is at the room's own speed (`pace: 1`, the aria is being sung) and `assemble`s the
   rifle: he sits in the gallery as one of the audience, takes it from a case at his feet and fits
   it together part by part (`BUILD` and `assembly` in `game.ts`; the rifle's lines are kept by part).
+  The block's is the same assembly kept out of sight (`stealth`): in at a crouch with the case in
+  one hand, a look over each shoulder, the rifle put together on one knee below the roof's low wall,
+  and only then up and over the edge. The wall and the roof's furniture are drawn by the place
+  (`Block.roof`), set from where the eye is, since whoever kneels there is placed from the eye.
+- **From a roof the square is faint.** `Place.hear` is how near a voice is at full level and
+  `Place.talk` how many may talk at once and the quiet between: the block's are 16 m (the people
+  are 45 to 90 m off, so some 12 to 16 dB down, the nearer the louder), one voice, 3.5 s or so.
 
 ## Checks
 
