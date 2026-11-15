@@ -10,8 +10,14 @@ import { V, mix } from "../ui/colors.ts";
 import { Glass, Scene, nearer, rayBox, type Box, type Crossing, type Impact, type Opening, type Spot, rng } from "./place.ts";
 import { drawSeated } from "./crew.ts";
 
-/** the car's run along the embankment (m), how fast, and how high the eye is in it */
-const START = -70, END = 70, SPEED = 4, EYE_Y = 1.2;
+/**
+ * The car's run along the embankment (m), how fast, and how high the eye is in it. At 4 m/s the
+ * café crossed an 8x scope in a couple of seconds, which was too hard (on a phone above all): it
+ * is a crawl now, 1.6 m/s, and the run is shorter so that the pass still takes about a minute.
+ */
+const START = -50, END = 50, SPEED = 1.6, EYE_Y = 1.2;
+/** how far the road goes between its seams (m): the least, and how much more it may be */
+const SEAM = 7, SEAM_MORE = 12;
 /** how far ahead of the eye the car's own middle is: the rifle is at the back seat's window */
 const CAR = 0.9;
 /** the river (its near bank, its far one, its surface), the terrace over the far quay, the buildings' faces */
@@ -31,7 +37,8 @@ export class Drive extends Scene {
   readonly lost = { banner: "TOO LATE", card: "The car went by, or the target got in at the café's door." };
   readonly yaw: [number, number] = [-0.85, 0.85];
   readonly pitch: [number, number] = [-0.1, 0.25];
-  readonly home = { yaw: -0.58, pitch: 0.014 };
+  /** (where the café is from the start of the run) */
+  readonly home = { yaw: -Math.atan2(-START, 7 - QUAY), pitch: 0.014 };
   readonly hear = 60;
   override readonly rough = 1.5;
   override readonly bipod = false;
@@ -64,7 +71,8 @@ export class Drive extends Scene {
   private x = START;
   private bump = 0;
   private bumpAge = 0;
-  private bumpIn = 1.5;
+  /** metres to the road's next seam */
+  private bumpIn = SEAM;
 
   constructor() {
     super();
@@ -93,7 +101,7 @@ export class Drive extends Scene {
     this.pane.mend();
     this.x = START;
     this.bump = 0;
-    this.bumpIn = 1.5;
+    this.bumpIn = SEAM;
   }
 
   eye(out: THREE.Vector3): THREE.Vector3 {
@@ -165,10 +173,10 @@ export class Drive extends Scene {
     this.x = Math.min(END, this.x + SPEED * dt);
     this.bump *= Math.exp(-5 * dt);
     this.bumpAge += dt;
-    this.bumpIn -= dt;
+    this.bumpIn -= SPEED * dt;
     if (this.bumpIn <= 0 && this.x < END) {
-      // a seam in the road: a soft thud under the seat
-      this.bumpIn = 1.8 + Math.random() * 3;
+      // a seam in the road: a soft thud under the seat (they come with the road, so a slow car meets fewer)
+      this.bumpIn = SEAM + Math.random() * SEAM_MORE;
       this.bump = 1;
       this.bumpAge = 0;
       this.sound?.("B", 0.5, 0.14);
